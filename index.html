@@ -1,0 +1,190 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="description" content="교무타임 – 지능형 시간표 최적화 및 분반 배정" />
+    <meta name="color-scheme" content="light dark" />
+    <meta name="theme-color" content="#ffffff" />
+    <title>교무타임 • 지능형 시간표 최적화</title>
+    <link rel="icon" href="assets/img/favicon.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="assets/css/styles.css" />
+    <style>
+      .dropzone { border: 2px dashed var(--color-border); border-radius: .7rem; padding: var(--space-6); text-align: center; background: var(--color-surface-2); }
+      .dropzone.dragover { background: color-mix(in oklab, var(--color-primary), white 85%); border-color: var(--color-primary); }
+      .muted { color: var(--color-text-muted); }
+    </style>
+  </head>
+  <body>
+    <a class="skip-link" href="#main">본문으로 바로가기</a>
+
+    <header class="site-header" role="banner">
+      <div class="container header__inner">
+        <a href="#" class="brand" aria-label="교무타임 홈" style="gap:.5rem;">
+          <img src="assets/img/logo.svg" alt="교무타임" width="24" height="24" />
+          <span>
+            <strong>교무타임</strong>
+            <small class="muted" style="display:block; font-size:.72rem; line-height:1;">Gyomutime</small>
+          </span>
+        </a>
+        <button class="nav-toggle" data-toggle="nav" aria-expanded="false" aria-controls="site-nav">
+          <span class="sr-only">내비게이션 토글</span>
+          <svg width="24" height="24" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6h18M3 12h18M3 18h18" stroke="currentColor" stroke-width="2" stroke-linecap="round" /></svg>
+        </button>
+        <nav id="site-nav" class="site-nav" role="navigation">
+          <ul>
+            <li><a href="#features">서비스</a></li>
+            <li><button class="btn" type="button" data-action="toggle-theme">테마 전환</button></li>
+            <li><a href="#architecture">아키텍처</a></li>
+            <li><a href="support.html">문의하기</a></li>
+            <li><a href="#" data-open-admin>관리자 콘솔</a></li>
+            <li><a href="#" data-open="login">로그인</a></li>
+          </ul>
+        </nav>
+      </div>
+    </header>
+
+    <main id="main" class="site-main" tabindex="-1">
+      <section class="hero hero--landing" aria-labelledby="hero-heading">
+        <div class="container">
+          <div class="pill" aria-hidden="true"><span class="dot"></span>AI‑Powered Optimization Engine</div>
+          <h1 id="hero-heading" style="margin-top:.8rem;">
+            지능형 시간표 <span class="accent">최적화</span> 시스템
+          </h1>
+          <p class="muted">고급 알고리즘과 머신러닝 기반 스케줄링. 복잡한 제약 조건을 자동 분석하여 최적의 시간표를 생성합니다.</p>
+          <!-- CTAs removed per request -->
+
+          <div class="container" style="margin-top: var(--space-6); max-width: 760px;">
+            <div style="display:grid; grid-template-columns:repeat(3,1fr); gap: var(--space-4);">
+              <div class="kpi"><div class="value">99.7%</div><div class="label">최적화 성공률</div></div>
+              <div class="kpi"><div class="value">&lt;30s</div><div class="label">평균 처리 시간</div></div>
+              <div class="kpi"><div class="value">1000+</div><div class="label">제약 조건 처리</div></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="features" class="section" aria-labelledby="features-heading">
+        <div class="container">
+          <h2 id="features-heading">무엇이 가능한가요?</h2>
+          <div class="feature-grid">
+            <a class="card" aria-label="시간표 최적화" href="timetable.html" style="text-decoration:none;color:inherit;">
+              <div style="font-size:2rem">⚙️</div>
+              <h3 style="margin-top:.5rem;">시간표 최적화</h3>
+              <p class="muted">다중 제약 조건 하에서 완전한 시간표를 자동 생성</p>
+            </a>
+            <a class="card" aria-label="선택과목 분반" href="grouping.html" style="text-decoration:none;color:inherit;">
+              <div style="font-size:2rem">👥</div>
+              <h3 style="margin-top:.5rem;">선택과목 분반 배정</h3>
+              <p class="muted">학생 선호도와 제약을 동시에 고려한 지능형 분반</p>
+            </a>
+            <article class="card" aria-label="대용량 처리">
+              <div style="font-size:2rem">⚡️</div>
+              <h3 style="margin-top:.5rem;">대용량 처리</h3>
+              <p class="muted">수천 개 변수/제약을 동시에 계산하는 고성능 엔진</p>
+            </article>
+          </div>
+        </div>
+      </section>
+
+      <section id="architecture" class="section" aria-labelledby="arch-heading" style="background:color-mix(in oklab, var(--color-surface), transparent 6%);">
+        <div class="container">
+          <h2 id="arch-heading">시스템 아키텍처 & 성능</h2>
+          <div class="feature-grid">
+            <article class="card">
+              <div style="font-size:2rem">⚡</div>
+              <h3 style="margin-top:.5rem;">고성능 컴퓨팅</h3>
+              <p class="muted">병렬/분산 처리로 대규모 스케줄링 문제를 실시간 해결</p>
+            </article>
+            <article class="card">
+              <div style="font-size:2rem">🗄️</div>
+              <h3 style="margin-top:.5rem;">빅데이터 처리</h3>
+              <p class="muted">수천 변수와 제한 조건을 동시에 분석하는 데이터 엔진</p>
+            </article>
+            <article class="card">
+              <div style="font-size:2rem">🧩</div>
+              <h3 style="margin-top:.5rem;">OR‑Tools 기반</h3>
+              <p class="muted">검증된 최적화 라이브러리로 안정적 솔버 성능 제공</p>
+            </article>
+          </div>
+          <div class="metric-grid" style="margin-top:var(--space-5);">
+            <div class="card kpi"><div class="value">10,000+</div><div class="label">동시 처리 변수 수</div></div>
+            <div class="card kpi"><div class="value">500+</div><div class="label">복합 제약 조건</div></div>
+            <div class="card kpi"><div class="value">99.9%</div><div class="label">시스템 가용성</div></div>
+            <div class="card kpi"><div class="value">24/7</div><div class="label">무중단 서비스</div></div>
+          </div>
+        </div>
+      </section>
+
+      <section id="templates" class="section" aria-labelledby="templates-heading">
+        <div class="container">
+          <h2 id="templates-heading">데이터 양식 다운로드</h2>
+          <p class="muted">관리자가 제공한 예시 데이터 양식을 내려받을 수 있습니다.</p>
+          <div id="template-list" class="features" style="margin-top: var(--space-4);"></div>
+        </div>
+      </section>
+    </main>
+
+    <footer class="site-footer" role="contentinfo">
+      <div class="container">
+        <small>© <span id="year"></span> 교무타임. All rights reserved.</small>
+      </div>
+    </footer>
+
+    <div id="auth-modal" class="modal" hidden>
+      <div class="modal__backdrop" data-close="modal"></div>
+      <div class="modal__dialog" role="dialog" aria-modal="true" aria-labelledby="auth-title">
+        <header class="modal__header">
+          <h3 id="auth-title">계정</h3>
+          <button class="btn" data-close="modal" aria-label="닫기">✕</button>
+        </header>
+        <div class="modal__body">
+          <div id="auth-choice" class="choice-grid">
+            <button class="choice-btn" data-choice="login">로그인</button>
+            <button class="choice-btn" data-choice="register">회원가입</button>
+            <button class="choice-btn" data-choice="admin">관리자 인증</button>
+          </div>
+
+          <form id="login-form" class="modal__form" autocomplete="on" hidden aria-labelledby="tab-login">
+            <div id="auth-error" class="muted" style="color:#ef4444;display:none;"></div>
+            <label>이메일<input name="email" type="email" required placeholder="you@example.com" /></label>
+            <label>비밀번호<input name="password" type="password" required autocomplete="current-password" /></label>
+            <div class="form-actions">
+              <button class="btn btn--primary" type="submit">로그인</button>
+            </div>
+            <div class="hr-text">또는</div>
+            <button class="btn" type="button" id="google-login">Google로 계속</button>
+            <div class="form-footer"><a href="#" data-switch="register">회원가입</a><a href="#" data-open-admin>관리자 접속</a></div>
+          </form>
+
+          <form id="register-form" class="modal__form" hidden aria-labelledby="tab-register">
+            <div id="auth-error-reg" class="muted" style="color:#ef4444;display:none;"></div>
+            <label>이메일<input name="email" type="email" required placeholder="you@example.com" /></label>
+            <label>비밀번호<input name="password" type="password" required minlength="6" autocomplete="new-password" /></label>
+            <div class="form-actions">
+              <button class="btn btn--primary" type="submit">회원가입</button>
+            </div>
+            <div class="hr-text">또는</div>
+            <button class="btn" type="button" id="google-register">Google로 계속</button>
+            <div class="form-footer" style="text-align:right;">
+              <a href="#" data-switch="login">이미 계정이 있으신가요? 로그인</a>
+            </div>
+          </form>
+
+          <form id="admin-form" class="modal__form" hidden>
+            <p class="muted">관리자 콘솔 접속을 위한 추가 인증</p>
+            <label>관리자 이메일<input name="email" type="email" required placeholder="admin@example.com" /></label>
+            <label>관리자 비밀번호<input name="adminCode" type="password" required /></label>
+            <div class="form-actions">
+              <button class="btn btn--primary" type="submit">관리자 콘솔로 이동</button>
+            </div>
+            <div class="form-footer" style="justify-content:flex-end;"><a href="#" data-switch="choice">뒤로</a></div>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <script type="module" src="assets/js/main.js"></script>
+    <script type="module" src="assets/js/auth-modal.js"></script>
+  </body>
+  </html>
