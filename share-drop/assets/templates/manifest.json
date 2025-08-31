@@ -1,0 +1,18 @@
+[
+  {
+    "id": "timetable",
+    "title": "시간표 데이터 예시 (CSV)",
+    "description": "교사/교실/가능시간 등 구성",
+    "filename": "timetable_template.csv",
+    "mime": "text/csv",
+    "url": "assets/templates/timetable_template.csv"
+  },
+  {
+    "id": "grouping",
+    "title": "선택과목 분반 예시 (CSV)",
+    "description": "학생 선호도 매트릭스",
+    "filename": "grouping_template.csv",
+    "mime": "text/csv",
+    "url": "assets/templates/grouping_template.csv"
+  }
+]

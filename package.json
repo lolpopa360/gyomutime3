@@ -1,0 +1,27 @@
+{
+  "name": "gyomutime-file-broker",
+  "private": true,
+  "workspaces": [
+    "web"
+  ],
+  "scripts": {
+    "dev": "concurrently -n VITE,NETLIFY -c blue,green \"npm:dev:web\" \"netlify dev\"",
+    "dev:web": "npm --workspace web run dev",
+    "build": "npm run build:web",
+    "build:web": "node scripts/sync-static.js && npm --workspace web run build && node scripts/postbuild-static.js",
+    "preview": "npm --workspace web run preview",
+    "test": "npm --workspace web run test",
+    "test:e2e": "npm --workspace web run test:e2e"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2",
+    "netlify-cli": "^17.33.1"
+  },
+  "dependencies": {
+    "@netlify/functions": "^2.8.2",
+    "firebase-admin": "^12.5.0",
+    "sanitize-html": "^2.13.0",
+    "uuid": "^9.0.1",
+    "zod": "^3.23.8"
+  }
+}

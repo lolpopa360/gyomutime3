@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="description" content="교무타임 관리자 페이지" />
+    <meta name="color-scheme" content="dark light" />
+    <meta name="theme-color" content="#ffffff" />
+    <title>교무타임 • 관리자 콘솔</title>
+    <link rel="icon" href="assets/img/favicon.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="assets/css/styles.css" />
+  </head>
+  <body>
+    <a class="skip-link" href="#main">본문으로 바로가기</a>
+
+    <header class="site-header" role="banner">
+      <div class="container header__inner">
+        <a href="index.html" class="brand" aria-label="교무타임 홈" style="gap:.5rem;">
+          <img src="assets/img/logo.svg" alt="교무타임" width="24" height="24" />
+          <span>
+            <strong>교무타임</strong>
+            <small class="muted" style="display:block; font-size:.72rem; line-height:1;">관리자 콘솔</small>
+          </span>
+        </a>
+
+        <nav class="site-nav" role="navigation">
+          <ul>
+            <li><a href="index.html">홈</a></li>
+            <li><a href="#" data-action="toggle-theme">테마 전환</a></li>
+            <li><button class="btn" id="logout-btn" type="button">로그아웃</button></li>
+          </ul>
+        </nav>
+      </div>
+    </header>
+
+    <main id="main" class="site-main" tabindex="-1">
+      <section class="hero" aria-labelledby="admin-heading">
+        <div class="container" style="text-align:center;">
+          <div class="pill"><span class="dot"></span>Secure Management</div>
+          <h1 id="admin-heading" style="margin-top:.8rem;">관리자 콘솔</h1>
+          <p class="muted">공지/일정/사용자/사이트 설정을 관리합니다. 이 데모는 로컬 저장소(localStorage)를 사용합니다.</p>
+        </div>
+      </section>
+      <section class="section" aria-labelledby="panel-heading">
+        <div class="container">
+          <h2 id="panel-heading" style="margin-bottom: .5rem;">콘솔</h2>
+          <div id="auth-wrap"></div>
+        </div>
+      </section>
+    </main>
+
+    <script type="module" src="assets/js/main.js"></script>
+    <script type="module" src="assets/js/admin.js"></script>
+  </body>
+  </html>

@@ -1,0 +1,28 @@
+/* Theme variables (from user-provided design tokens) */
+@import './theme.css';
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: dark light;
+}
+
+@layer base {
+  /* Use variable-driven colors with Tailwind utilities */
+  * { @apply border-border; }
+  body { @apply bg-background text-foreground; }
+}
+
+html, body, #root { height: 100%; }
+
+.glass {
+  @apply bg-white/70 dark:bg-slate-900/40 backdrop-blur-md border border-slate-200/60 dark:border-slate-700/60 shadow-lg;
+}
+
+.btn {
+  @apply inline-flex items-center justify-center gap-2 rounded-md px-4 py-2 text-sm font-medium transition-colors disabled:opacity-60 disabled:cursor-not-allowed;
+}
+.btn-primary { @apply btn bg-blue-600 text-white hover:bg-blue-500 active:bg-blue-700; }
+.btn-outline { @apply btn border border-slate-300 dark:border-slate-600 hover:bg-slate-50/60 dark:hover:bg-slate-800/50; }

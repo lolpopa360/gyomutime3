@@ -1,0 +1,215 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="color-scheme" content="dark light" />
+    <title>교무타임 • 선택과목 분반 배정</title>
+    <link rel="icon" href="assets/img/favicon.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="assets/css/styles.css" />
+  </head>
+  <body>
+    <a class="skip-link" href="#main">본문으로 바로가기</a>
+
+    <header class="site-header" role="banner">
+      <div class="container header__inner">
+        <a href="index.html" class="brand" aria-label="교무타임 홈" style="gap:.5rem;">
+          <span style="inline-size:1.2rem; block-size:1.2rem; background:var(--color-primary); border-radius:.3rem;"></span>
+          <span>
+            <strong>교무타임</strong>
+            <small class="muted" style="display:block; font-size:.72rem; line-height:1;">Gyomutime</small>
+          </span>
+        </a>
+        <nav class="site-nav" role="navigation" id="site-nav">
+          <ul>
+            <li><a href="index.html#features">서비스</a></li>
+            <li><a href="#" data-action="toggle-theme">테마 전환</a></li>
+            <li><a href="index.html">홈으로</a></li>
+            <li><a href="#" data-open-admin>관리자 콘솔</a></li>
+            <li><a href="#" data-open="login">로그인</a></li>
+          </ul>
+        </nav>
+      </div>
+    </header>
+
+    <main id="main" tabindex="-1">
+      <section class="hero">
+        <div class="container" style="text-align:center;">
+          <div class="pill"><span class="dot"></span>선택과목 분반 최적화 알고리즘</div>
+          <h1 style="margin-top:.8rem;">선택과목 분반 배정</h1>
+          <p class="muted">고급 제약 조건을 설정하여 학생들의 선택 희망을 바탕으로 최적의 분반을 자동 배정합니다.</p>
+        </div>
+      </section>
+
+      <section class="section">
+        <div class="container" style="display:grid; gap: var(--space-4); grid-template-columns: 1fr;">
+          <div class="grid-2">
+            <div class="card">
+              <h2 style="margin:0 0 .5rem 0;">알고리즘 제약 조건 설정</h2>
+              <p class="muted">분반 배정 최적화를 위한 상세 제약을 설정합니다.</p>
+
+              <div style="display:grid; gap: .8rem; margin-top:1rem;" id="grouping-form">
+                <label>담당자 이름 *<input id="gr-name" placeholder="담당자 성함을 입력해주세요" required /></label>
+                <label>담당자 이메일 *<input id="gr-email" type="email" placeholder="you@example.com" required /></label>
+                <label>선택과목 데이터 파일 (.xlsx 또는 .csv) *
+                  <div style="display:flex; gap:.5rem; align-items:center;">
+                    <label class="btn" style="position:relative; overflow:hidden;">
+                      파일 선택
+                      <input id="gr-file" type="file" accept=".xlsx,.csv,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel" style="position:absolute;inset:0;opacity:0;cursor:pointer;"/>
+                    </label>
+                    <span id="gr-file-label" class="muted">선택된 파일 없음</span>
+                  </div>
+                </label>
+
+                <div class="card" style="background:var(--color-surface-2);">
+                  <h3 style="margin:0 0 .25rem 0;">분반 제약 조건</h3>
+                  <div style="display:grid; grid-template-columns:repeat(3,1fr); gap:.5rem;">
+                    <label>분반당 최대 학생 수<input id="gr-max-per-class" type="number" value="25" min="1" /></label>
+                    <label>선택 슬롯 최소 과목 수<input id="gr-min-slots" type="number" value="1" min="0" /></label>
+                    <label>선택 슬롯 최대 과목 수<input id="gr-max-slots" type="number" value="3" min="1" /></label>
+                  </div>
+                  <div class="card" style="background:var(--color-surface); margin-top:.5rem;">
+                    <strong>특정 과목 예외 제약 적용</strong>
+                    <p class="muted">일부 과목에 대해 다른 제약을 적용하시겠습니까? (예: 일반적으로 분반은 25명이지만 체육은 30명 허용)</p>
+                  </div>
+                  <div class="card" style="background:var(--color-surface);">
+                    <strong>최적화 성능 안내</strong>
+                    <p class="muted">제약 조건이 많을수록 최적해를 찾기 어려워집니다. 필수적인 제약 조건만 설정하는 것을 권장합니다.</p>
+                  </div>
+                </div>
+
+                <label>특이 사항 (선택)
+                  <textarea id="gr-notes" rows="4" placeholder="예: 특정 학생은 과목 X를 반드시 배정, 체육은 30명 허용 등"></textarea>
+                </label>
+                <div style="display:flex; gap:.5rem; align-items:center;">
+                  <button id="gr-submit" class="btn btn--primary" type="button">분반 최적화 요청 제출</button>
+                  <span id="gr-status" class="muted" role="status" aria-live="polite"></span>
+                </div>
+              </div>
+            </div>
+
+            <div class="card">
+              <h2 style="margin:0 0 .5rem 0;">데이터 입력 형식</h2>
+              <div class="card" style="background:var(--color-surface-2); overflow:auto;">
+                <h3>엑셀 파일 구조</h3>
+                <table style="width:100%; border-collapse:collapse; margin-top:.5rem;">
+                  <thead>
+                    <tr>
+                      <th style="text-align:left; border-bottom:1px solid var(--color-border); padding:.4rem;">학생ID</th>
+                      <th style="text-align:left; border-bottom:1px solid var(--color-border); padding:.4rem;">수학심화</th>
+                      <th style="text-align:left; border-bottom:1px solid var(--color-border); padding:.4rem;">물리학</th>
+                      <th style="text-align:left; border-bottom:1px solid var(--color-border); padding:.4rem;">화학</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td style="padding:.45rem; border-bottom:1px dashed var(--color-border);">2024001</td>
+                      <td style="padding:.45rem; border-bottom:1px dashed var(--color-border);">1</td>
+                      <td style="padding:.45rem; border-bottom:1px dashed var(--color-border);">0</td>
+                      <td style="padding:.45rem; border-bottom:1px dashed var(--color-border);">1</td>
+                    </tr>
+                    <tr>
+                      <td style="padding:.45rem;">2024002</td>
+                      <td style="padding:.45rem;">0</td>
+                      <td style="padding:.45rem;">1</td>
+                      <td style="padding:.45rem;">0</td>
+                    </tr>
+                  </tbody>
+                </table>
+                <ul style="margin-top:.5rem;">
+                  <li>첫 번째 열: 학생 고유 ID (학번, 학생번호)</li>
+                  <li>이후 열들: 각 선택과목명을 헤더로 사용</li>
+                  <li>데이터 값: 1 = 희망함, 0 = 희망하지 않음</li>
+                </ul>
+              </div>
+
+              <div class="card" style="background:var(--color-surface-2);">
+                <h3>최적화 알고리즘 프로세스</h3>
+                <ol>
+                  <li>학생 선호도 매트릭스 생성</li>
+                  <li>제약 조건 파라미터 설정</li>
+                  <li>OR-Tools 솔버 실행</li>
+                  <li>최적 분반 배정 결과 생성</li>
+                </ol>
+              </div>
+
+              <div class="card" style="background:var(--color-surface-2);">
+                <h3>알고리즘 최적화 목표</h3>
+                <ul>
+                  <li>학생 희망 과목 만족도 최대화</li>
+                  <li>분반별 인원수 균형 최적화</li>
+                  <li>교실 및 교사 리소스 효율성</li>
+                  <li>시간표 충돌 최소화</li>
+                </ul>
+              </div>
+
+              <div class="card" style="background:var(--color-surface-2);">
+                <h3>처리 시간</h3>
+                <p class="muted">학생 수와 제약 조건 복잡도에 따라 1–12시간 소요. 복잡할수록 처리 시간이 증가할 수 있습니다.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <footer class="site-footer" role="contentinfo">
+      <div class="container"><small>© <span id="year"></span> 교무타임</small></div>
+    </footer>
+    
+    <!-- Auth modal (shared) -->
+    <div id="auth-modal" class="modal" hidden>
+      <div class="modal__backdrop" data-close="modal"></div>
+      <div class="modal__dialog" role="dialog" aria-modal="true" aria-labelledby="auth-title">
+        <header class="modal__header">
+          <h3 id="auth-title">계정</h3>
+          <button class="btn" data-close="modal" aria-label="닫기">✕</button>
+        </header>
+        <div class="modal__body">
+          <div id="auth-choice" class="choice-grid">
+            <button class="choice-btn" data-choice="login">로그인</button>
+            <button class="choice-btn" data-choice="register">회원가입</button>
+            <button class="choice-btn" data-choice="admin">관리자 인증</button>
+          </div>
+          <form id="login-form" class="modal__form" autocomplete="on" hidden aria-labelledby="tab-login">
+            <div id="auth-error" class="muted" style="color:#ef4444;display:none;"></div>
+            <label>이메일<input name="email" type="email" required placeholder="you@example.com" /></label>
+            <label>비밀번호<input name="password" type="password" required autocomplete="current-password" /></label>
+            <div class="form-actions">
+              <button class="btn btn--primary" type="submit">로그인</button>
+            </div>
+            <div class="hr-text">또는</div>
+            <button class="btn" type="button" id="google-login">Google로 계속</button>
+            <div class="form-footer"><a href="#" data-switch="register">회원가입</a><a href="#" data-open-admin>관리자 접속</a></div>
+          </form>
+          <form id="register-form" class="modal__form" hidden aria-labelledby="tab-register">
+            <div id="auth-error-reg" class="muted" style="color:#ef4444;display:none;"></div>
+            <label>이메일<input name="email" type="email" required placeholder="you@example.com" /></label>
+            <label>비밀번호<input name="password" type="password" required minlength="6" autocomplete="new-password" /></label>
+            <div class="form-actions">
+              <button class="btn btn--primary" type="submit">회원가입</button>
+            </div>
+            <div class="hr-text">또는</div>
+            <button class="btn" type="button" id="google-register">Google로 계속</button>
+            <div class="form-footer" style="text-align:right;">
+              <a href="#" data-switch="login">이미 계정이 있으신가요? 로그인</a>
+            </div>
+          </form>
+          <form id="admin-form" class="modal__form" hidden>
+            <p class="muted">관리자 콘솔 접속을 위한 추가 인증</p>
+            <label>관리자 이메일<input name="email" type="email" required placeholder="admin@example.com" /></label>
+            <label>관리자 비밀번호<input name="adminCode" type="password" required /></label>
+            <div class="form-actions">
+              <button class="btn btn--primary" type="submit">관리자 콘솔로 이동</button>
+            </div>
+            <div class="form-footer" style="justify-content:flex-end;"><a href="#" data-switch="choice">뒤로</a></div>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <script type="module" src="assets/js/main.js"></script>
+    <script type="module" src="assets/js/auth-modal.js"></script>
+    <script type="module" src="assets/js/grouping.js"></script>
+  </body>
+  </html>

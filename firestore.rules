@@ -1,0 +1,52 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isAdmin() {
+      return isSignedIn() && request.auth.token.role == 'admin';
+    }
+
+    match /submissions/{id} {
+      allow read: if isSignedIn() && (resource.data.ownerUid == request.auth.uid || isAdmin());
+
+      allow create: if isSignedIn()
+        && request.resource.data.ownerUid == request.auth.uid
+        && request.resource.data.title is string && request.resource.data.title.size() <= 100
+        && request.resource.data.description is string && request.resource.data.description.size() <= 2000
+        && request.resource.data.category in ['기타','이미지','문서','데이터','코드']
+        && request.resource.data.status == 'uploaded';
+
+      allow update: if isSignedIn() && (
+          // Owner: only limited fields shortly after creation
+          (
+            resource.data.ownerUid == request.auth.uid &&
+            // Allow editing title/description within 30 minutes of creation
+            request.time < resource.data.createdAt + duration.value(30, 'm') &&
+            request.resource.data.diff(resource.data).changedKeys().hasOnly(['title','description']) &&
+            request.resource.data.title is string && request.resource.data.title.size() <= 100 &&
+            request.resource.data.description is string && request.resource.data.description.size() <= 2000
+          ) ||
+          // Admin: can change status, results, messages, updatedAt
+          (
+            isAdmin() &&
+            request.resource.data.status in ['uploaded','processing','completed','rejected'] &&
+            request.resource.data.keys().hasOnly(['ownerUid','ownerEmail','title','description','category','status','createdAt','updatedAt','files','results','messages'])
+          )
+        );
+    }
+
+    match /admins/{email} {
+      allow read: if isSignedIn() && isAdmin();
+      allow write: if false; // only via server
+    }
+
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
+

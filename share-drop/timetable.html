@@ -1,0 +1,166 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="color-scheme" content="dark light" />
+    <title>교무타임 • 시간표 최적화</title>
+    <link rel="icon" href="assets/img/favicon.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="assets/css/styles.css" />
+  </head>
+  <body>
+    <a class="skip-link" href="#main">본문으로 바로가기</a>
+
+    <header class="site-header" role="banner">
+      <div class="container header__inner">
+        <a href="index.html" class="brand" aria-label="교무타임 홈" style="gap:.5rem;">
+          <img src="assets/img/logo.svg" alt="교무타임" width="24" height="24" />
+          <span>
+            <strong>교무타임</strong>
+            <small class="muted" style="display:block; font-size:.72rem; line-height:1;">Gyomutime</small>
+          </span>
+        </a>
+        <nav class="site-nav" role="navigation">
+          <ul>
+            <li><a href="index.html#features">서비스</a></li>
+            <li><a href="#" data-action="toggle-theme">테마 전환</a></li>
+            <li><a href="index.html">홈으로</a></li>
+          </ul>
+        </nav>
+      </div>
+    </header>
+
+    <main id="main" tabindex="-1">
+      <section class="hero">
+        <div class="container" style="text-align:center;">
+          <div class="pill"><span class="dot"></span>시간표 최적화 엔진</div>
+          <h1 style="margin-top:.8rem;">시간표 생성 요청</h1>
+          <p class="muted">고급 제약 조건을 설정하여 최적화된 시간표를 자동 생성합니다. 복잡한 스케줄링 문제를 지능형 알고리즘으로 해결합니다.</p>
+        </div>
+      </section>
+
+      <section class="section">
+        <div class="container" style="display:grid; gap: var(--space-4); grid-template-columns: 1fr;">
+          <div class="grid-2">
+            <div class="card">
+              <h2 style="margin:0 0 .5rem 0;">시간표 제약 조건 설정</h2>
+              <p class="muted">시간표 최적화를 위한 상세 제약과 파라미터를 설정해주세요.</p>
+
+              <div style="display:grid; gap: .8rem; margin-top:1rem;">
+                <label>담당자 이름 *<input placeholder="담당자 성함을 입력해주세요" /></label>
+                <label>시간표 데이터 파일 (.xlsx) *
+                  <div style="display:flex; gap:.5rem; align-items:center;">
+                    <label class="btn" style="position:relative; overflow:hidden;">
+                      파일 선택
+                      <input type="file" accept=".xlsx,.csv" style="position:absolute;inset:0;opacity:0;cursor:pointer;"/>
+                    </label>
+                    <span class="muted">선택된 파일 없음</span>
+                  </div>
+                </label>
+
+                <div class="card" style="background:var(--color-surface-2);">
+                  <h3 style="margin:0 0 .25rem 0;">요일별 교시 수 설정</h3>
+                  <div style="display:grid; grid-template-columns:repeat(5,1fr); gap:.5rem;">
+                    <label>월요일<input type="number" min="0" max="15" value="7" inputmode="numeric" /></label>
+                    <label>화요일<input type="number" min="0" max="15" value="7" inputmode="numeric" /></label>
+                    <label>수요일<input type="number" min="0" max="15" value="7" inputmode="numeric" /></label>
+                    <label>목요일<input type="number" min="0" max="15" value="7" inputmode="numeric" /></label>
+                    <label>금요일<input type="number" min="0" max="15" value="7" inputmode="numeric" /></label>
+                  </div>
+                </div>
+
+                <div class="card" style="background:var(--color-surface-2);">
+                  <div style="display:flex; justify-content:space-between; align-items:center; gap:.5rem;">
+                    <h3 style="margin:0 0 .25rem 0;">이동수업 연속 제한</h3>
+                    <button class="btn" id="move-none">사용하지 않음</button>
+                  </div>
+                  <div style="display:grid; gap:.75rem;">
+                    <div>
+                      <strong>적용 학년 (중복 선택)</strong>
+                      <div style="display:grid; grid-template-columns:1fr 1fr; gap:.75rem; margin-top:.35rem;">
+                        <div class="card" style="background:var(--color-surface);">
+                          <div style="font-weight:600; margin-bottom:.25rem;">중학교</div>
+                          <label style="display:flex; gap:.5rem; align-items:center;"><input type="checkbox" class="chk-grade" value="MS1"> 1학년</label>
+                          <label style="display:flex; gap:.5rem; align-items:center;"><input type="checkbox" class="chk-grade" value="MS2"> 2학년</label>
+                          <label style="display:flex; gap:.5rem; align-items:center;"><input type="checkbox" class="chk-grade" value="MS3"> 3학년</label>
+                        </div>
+                        <div class="card" style="background:var(--color-surface);">
+                          <div style="font-weight:600; margin-bottom:.25rem;">고등학교</div>
+                          <label style="display:flex; gap:.5rem; align-items:center;"><input type="checkbox" class="chk-grade" value="HS1"> 1학년</label>
+                          <label style="display:flex; gap:.5rem; align-items:center;"><input type="checkbox" class="chk-grade" value="HS2"> 2학년</label>
+                          <label style="display:flex; gap:.5rem; align-items:center;"><input type="checkbox" class="chk-grade" value="HS3"> 3학년</label>
+                        </div>
+                      </div>
+                    </div>
+                    <div>
+                      <label>최대 연속 이동수업 수 <input id="max-move" type="number" min="0" max="10" value="2" inputmode="numeric" /></label>
+                      <div class="muted" style="margin-top:.25rem;">선택한 학년의 선택과목을 연속으로 몇 교시까지 배치할지 설정</div>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="card" style="background:var(--color-surface-2);">
+                  <h3 style="margin:0 0 .25rem 0;">특정 교사 시간 제외 설정</h3>
+                  <p class="muted">특정 교사의 특정 시간대를 제외하시겠습니까? (예: 김선생님 월요일 1교시 제외)</p>
+                  <label>제외 규칙<input placeholder="예: 김선생님 월1" /></label>
+                </div>
+
+                <div class="card" style="background:var(--color-surface-2);">
+                  <strong>최적화 성능 경고</strong>
+                  <p class="muted" style="margin-top:.25rem;">제약 조건이 많을수록 최적해를 찾기 어려워집니다. 꼭 필요한 제약만 설정하시기 바랍니다.</p>
+                </div>
+
+                <button class="btn btn--primary">시간표 최적화 알고리즘 실행</button>
+              </div>
+            </div>
+
+            <div class="card">
+              <h2 style="margin:0 0 .5rem 0;">데이터 입력 형식</h2>
+              <div class="card" style="background:var(--color-surface-2);">
+                <h3>엑셀 파일 구성</h3>
+                <ul>
+                  <li>교사 정보 시트: 교사명, 담당과목, 가능시간</li>
+                  <li>교실 정보 시트: 교실명, 수용인원, 사용가능시간</li>
+                  <li>과목 정보 시트: 과목명, 시수, 학급별 배정</li>
+                  <li>학급 정보 시트: 학급명, 학년, 학생수</li>
+                </ul>
+              </div>
+
+              <div class="card" style="background:var(--color-surface-2);">
+                <h3>최적화 알고리즘 프로세스</h3>
+                <ol>
+                  <li>제약 조건 매트릭스 생성</li>
+                  <li>리소스 할당 최적화 실행</li>
+                  <li>충돌 검증 및 해결</li>
+                  <li>최적 시간표 결과 생성</li>
+                </ol>
+              </div>
+
+              <div class="card" style="background:var(--color-surface-2);">
+                <h3>알고리즘 최적화 목표</h3>
+                <ul>
+                  <li>교사-교실-시간 충돌 최소화</li>
+                  <li>이동수업 연속성 제약 준수</li>
+                  <li>교사 워크로드 균형 최적화</li>
+                  <li>교실 활용도 극대화</li>
+                </ul>
+              </div>
+
+              <div class="card" style="background:var(--color-surface-2);">
+                <h3>처리 시간</h3>
+                <p class="muted">제약 조건 복잡도에 따라 1–24시간 소요. 복잡할수록 처리 시간이 증가할 수 있습니다.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <footer class="site-footer" role="contentinfo">
+      <div class="container"><small>© <span id="year"></span> 교무타임</small></div>
+    </footer>
+
+    <script type="module" src="assets/js/main.js"></script>
+    <script type="module" src="assets/js/timetable.js"></script>
+  </body>
+  </html>

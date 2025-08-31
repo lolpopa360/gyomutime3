@@ -58,6 +58,12 @@ out/
 public/build/
 coverage/
 htmlcov/
+web/public/assets
+web/public/index.html
+web/public/grouping.html
+web/public/admin.html
+web/public/support.html
+web/public/timetable.html
 
 # Python
 __pycache__/

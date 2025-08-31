@@ -1,0 +1,99 @@
+# Netlify Configuration for GYOMUTIME
+# Production deployment settings
+
+[build]
+  # Build command - builds the React app
+  command = "npm run build:web"
+  
+  # Directory to deploy (React build output)
+  publish = "web/dist"
+  
+  # Functions directory
+  functions = "netlify/functions"
+  
+  # Environment variables for build
+  [build.environment]
+    NODE_VERSION = "20"
+    NPM_VERSION = "10"
+    # Suppress warnings during build
+    CI = "true"
+
+# Development settings
+[dev]
+  command = "npm run dev"
+  port = 8888
+  targetPort = 5173
+  publish = "web/dist"
+  autoLaunch = false
+
+# Functions configuration
+[functions]
+  directory = "netlify/functions"
+  node_bundler = "esbuild"
+  
+  # External packages that shouldn't be bundled
+  external_node_modules = ["firebase-admin"]
+  
+  # Include source maps for debugging
+  included_files = ["**/*.json"]
+
+# Redirects and rewrites
+[[redirects]]
+  from = "/api/*"
+  to = "/.netlify/functions/:splat"
+  status = 200
+
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
+
+# Security headers
+[[headers]]
+  for = "/*"
+  [headers.values]
+    # Security headers
+    X-Frame-Options = "DENY"
+    X-Content-Type-Options = "nosniff"
+    X-XSS-Protection = "1; mode=block"
+    Referrer-Policy = "strict-origin-when-cross-origin"
+    Permissions-Policy = "camera=(), microphone=(), geolocation=()"
+    
+    # Cache control for static assets
+    Cache-Control = "public, max-age=3600, must-revalidate"
+
+[[headers]]
+  for = "/assets/*"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
+
+[[headers]]
+  for = "/*.js"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
+
+[[headers]]
+  for = "/*.css"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
+
+[[headers]]
+  for = "/api/*"
+  [headers.values]
+    Access-Control-Allow-Origin = "*"
+    Access-Control-Allow-Headers = "Content-Type, Authorization"
+    Access-Control-Allow-Methods = "GET, POST, PUT, DELETE, OPTIONS"
+    Access-Control-Max-Age = "86400"
+
+# Environment variable templates (for Netlify UI)
+[template.environment]
+  VITE_FIREBASE_CONFIG = "Firebase client configuration JSON"
+  FIREBASE_SERVICE_ACCOUNT_JSON = "Firebase service account JSON for admin SDK"
+  SUPER_ADMIN_EMAIL = "Super admin email address"
+  RESEND_API_KEY = "Resend API key for email notifications (optional)"
+  RATE_LIMIT_MAX_REQUESTS = "Maximum requests per window (default: 100)"
+  RATE_LIMIT_WINDOW_MS = "Rate limit window in milliseconds (default: 60000)"
+
+# Build plugins
+[[plugins]]
+  package = "@netlify/plugin-functions-install-core"
