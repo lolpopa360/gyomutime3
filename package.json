@@ -1,5 +1,5 @@
 {
-  "name": "gyomutime-file-broker",
+  "name": "cp-sat",
   "private": true,
   "workspaces": [
     "web"
