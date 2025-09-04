@@ -63,36 +63,31 @@ async function submitGrouping() {
 
     status('제출 준비 중...')
 
-    // If n8n webhook is configured, prefer sending to n8n which will
-    // prepare a Colab notebook with the uploaded data and return a link.
-    if (window.N8N_SECTIONING_WEBHOOK) {
-      try {
-        status('n8n으로 전송 중...')
-        const result = await window.n8nClient.submitSectioning({
-          name, email, notes,
-          maxPerClass: maxPer,
-          minSlots, maxSlots,
-          file,
-        })
-        const url = result?.colab_url || result?.url || result?.open_url
-        status('전송 완료. Colab 열기 준비됨')
-        if (url) {
-          window.open(url, '_blank', 'noopener')
-          alert('Colab에서 노트북이 열립니다. "런타임"→"모두 실행"을 눌러 실행하세요.')
-          return
-        }
-        // If n8n responded without a URL, fall back to legacy path below
-        status('Colab URL이 응답에 없습니다. 서버 응답 형식을 확인하세요.', false)
-      } catch (e) {
-        logger.warn('n8n submission failed, falling back', e)
-        status('n8n 전송 실패. 백엔드/로컬 모드로 전환합니다...', false)
-      }
-    }
+    // n8n/colab 연동 제거: 관리자 제출로만 처리합니다.
     const fb = await loadFirebase()
     const token = await getIdToken(fb)
-    // 토큰이 없거나, 함수가 실패하면 자동으로 로컬 데모 모드로 폴백합니다.
+    // 로그인 필수
+    if (!token) { status('로그인이 필요합니다. 로그인 후 다시 제출하세요.', false); alert('로그인이 필요합니다.'); return }
 
-    // 1) 서버에 제출 레코드 생성
+    // 0) 로컬 데모 fallback 준비
+    const demo = {
+      read() { try { return JSON.parse(localStorage.getItem('demo.submissions')||'[]') } catch { return [] } },
+      write(arr) { localStorage.setItem('demo.submissions', JSON.stringify(arr)) },
+      simulateProcessing(id) {
+        setTimeout(()=>{
+          const arr1 = demo.read(); const it1 = arr1.find(x=>x.id===id); if (!it1) return;
+          it1.status = 'processing'; it1.updatedAt = new Date().toISOString(); demo.write(arr1);
+          setTimeout(()=>{
+            const arr2 = demo.read(); const it2 = arr2.find(x=>x.id===id); if (!it2) return;
+            it2.status = 'completed'; it2.updatedAt = new Date().toISOString();
+            it2.results = [{ name: 'result.txt', size: 19, storagePath: 'local/demo/result.txt', contentType: 'text/plain' }];
+            demo.write(arr2);
+          }, 2000)
+        }, 800)
+      }
+    }
+
+    // 1) 서버에 제출 레코드 생성 (Netlify Functions)
     const title = `선택과목 분반 요청 - ${name}`
     const description = `담당자: ${name} <${email}>\n분반당 최대 학생 수: ${maxPer}\n선택 슬롯: ${minSlots}~${maxSlots}\n특이 사항: ${notes || '(없음)'}`
     const body = {
@@ -112,54 +107,34 @@ async function submitGrouping() {
       },
     }
     let sid = null
-    let usedFallback = false
-    if (token) {
-      try {
-        status('제출 생성 중...')
-        const resCreate = await fetch('/.netlify/functions/submission/create', {
-          method: 'POST', headers: { 'content-type': 'application/json', authorization: `Bearer ${token}` },
-          body: JSON.stringify(body)
-        })
-        if (!resCreate.ok) throw await resCreate.json().catch(()=>({ error: { message: '제출 생성 실패' } }))
-        const created = await resCreate.json()
-        sid = created.id
-      } catch (_) {
-        usedFallback = true
-      }
-    } else {
-      usedFallback = true
-    }
-
-    // Local fallback: store to localStorage and simulate processing
-    if (usedFallback) {
-      const readDemo = () => { try { return JSON.parse(localStorage.getItem('demo.submissions')||'[]') } catch { return [] } }
-      const writeDemo = (arr) => localStorage.setItem('demo.submissions', JSON.stringify(arr))
-      const simulateProcessing = (id) => {
-        setTimeout(()=>{
-          const arr1 = readDemo(); const it1 = arr1.find(x=>x.id===id); if (!it1) return;
-          it1.status = 'processing'; it1.updatedAt = new Date().toISOString(); writeDemo(arr1);
-          setTimeout(()=>{
-            const arr2 = readDemo(); const it2 = arr2.find(x=>x.id===id); if (!it2) return;
-            it2.status = 'completed'; it2.updatedAt = new Date().toISOString();
-            it2.results = [{ name: 'result.txt', size: 19, storagePath: 'local/demo/result.txt', contentType: 'text/plain' }];
-            writeDemo(arr2);
-          }, 2000)
-        }, 800)
-      }
-      sid = String(Date.now())
+    status('제출 생성 중...')
+    try {
+      const resCreate = await fetch('/.netlify/functions/submission/create', {
+        method: 'POST', headers: { 'content-type': 'application/json', authorization: `Bearer ${token}` },
+        body: JSON.stringify(body)
+      })
+      if (!resCreate.ok) throw new Error('create_failed')
+      const created = await resCreate.json()
+      sid = created.id
+    } catch (e) {
+      // Likely running without Netlify dev (e.g., 127.0.0.1:5500) → fallback to local mode
+      const localId = String(Date.now())
       const entry = {
-        id: sid,
+        id: localId,
         ownerUid: 'local', ownerEmail: email,
         title, description, category: '데이터',
         status: 'uploaded', createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(),
         files: [{ name: file.name, size: file.size, contentType: file.type || 'application/octet-stream' }],
         results: [], messages: [],
+        meta: body.meta || {}
       }
-      const arr = readDemo(); arr.unshift(entry); writeDemo(arr); simulateProcessing(sid)
-      status('로컬 모드로 제출되었습니다. 처리 대기 중...')
-      alert('백엔드가 연결되지 않아 로컬 모드로 제출되었습니다. 배포 환경에서는 자동으로 서버에 업로드됩니다.')
+      const arr = demo.read(); arr.unshift(entry); demo.write(arr); demo.simulateProcessing(localId)
+      status('서버 연결이 없어 로컬 모드로 제출되었습니다. 처리 대기 중...', false)
+      alert('개발 서버(Netlify dev)와 연결되지 않아 로컬 모드로 제출되었습니다. 배포 환경 또는 netlify dev에서 자동 업로드됩니다.')
       return
     }
+
+    // 로컬 데모 모드 제거
 
     // 2) 업로드 URL 생성 후 업로드
     status('파일 업로드 준비 중...')
@@ -178,20 +153,6 @@ async function submitGrouping() {
     } else {
       // Fallback if upload URL failed after creation
       status('서버 업로드가 실패하여 로컬 모드로 전환합니다...', false)
-      const readDemo = () => { try { return JSON.parse(localStorage.getItem('demo.submissions')||'[]') } catch { return [] } }
-      const writeDemo = (arr) => localStorage.setItem('demo.submissions', JSON.stringify(arr))
-      const simulateProcessing = (id) => {
-        setTimeout(()=>{
-          const arr1 = readDemo(); const it1 = arr1.find(x=>x.id===id); if (!it1) return;
-          it1.status = 'processing'; it1.updatedAt = new Date().toISOString(); writeDemo(arr1);
-          setTimeout(()=>{
-            const arr2 = readDemo(); const it2 = arr2.find(x=>x.id===id); if (!it2) return;
-            it2.status = 'completed'; it2.updatedAt = new Date().toISOString();
-            it2.results = [{ name: 'result.txt', size: 19, storagePath: 'local/demo/result.txt', contentType: 'text/plain' }];
-            writeDemo(arr2);
-          }, 2000)
-        }, 800)
-      }
       const entry = {
         id: sid,
         ownerUid: 'local', ownerEmail: email,
@@ -200,7 +161,7 @@ async function submitGrouping() {
         files: [{ name: file.name, size: file.size, contentType: file.type || 'application/octet-stream' }],
         results: [], messages: [],
       }
-      const arr = readDemo(); arr.unshift(entry); writeDemo(arr); simulateProcessing(sid)
+      const arr = demo.read(); arr.unshift(entry); demo.write(arr); demo.simulateProcessing(sid)
       alert('업로드 URL 생성에 실패하여 로컬 모드로 제출되었습니다. 배포 환경에서는 자동 업로드됩니다.')
       status('로컬 모드 제출 완료. 처리 대기 중...')
       return

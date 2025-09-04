@@ -34,8 +34,8 @@
       <section class="hero">
         <div class="container" style="text-align:center;">
           <div class="pill"><span class="dot"></span>시간표 최적화 엔진</div>
-          <h1 style="margin-top:.8rem;">시간표 생성 요청</h1>
-          <p class="muted">고급 제약 조건을 설정하여 최적화된 시간표를 자동 생성합니다. 복잡한 스케줄링 문제를 지능형 알고리즘으로 해결합니다.</p>
+          <h1 style="margin-top:.8rem;">시간표 데이터 제출</h1>
+          <p class="muted">제출하신 데이터와 요구 사항은 관리자 검토 후 처리됩니다. 자동 실행은 하지 않습니다.</p>
         </div>
       </section>
 
@@ -48,6 +48,7 @@
 
               <div style="display:grid; gap: .8rem; margin-top:1rem;">
                 <label>담당자 이름 *<input id="tt-name" placeholder="담당자 성함을 입력해주세요" /></label>
+                <label>담당자 이메일 *<input id="tt-email" type="email" placeholder="연락 가능한 이메일을 입력해주세요" /></label>
                 <label>시간표 데이터 파일 (.xlsx) *
                   <div style="display:flex; gap:.5rem; align-items:center;">
                     <label class="btn" style="position:relative; overflow:hidden;">
@@ -110,7 +111,10 @@
                   <p class="muted" style="margin-top:.25rem;">제약 조건이 많을수록 최적해를 찾기 어려워집니다. 꼭 필요한 제약만 설정하시기 바랍니다.</p>
                 </div>
 
-                <button id="tt-submit" class="btn btn--primary">시간표 최적화 알고리즘 실행</button>
+                <div style="display:flex; align-items:center; gap:.75rem;">
+                  <button id="tt-submit" class="btn btn--primary">시간표 데이터 제출</button>
+                  <span id="tt-status" class="muted"></span>
+                </div>
               </div>
             </div>
 
@@ -161,9 +165,7 @@
     </footer>
 
     <script type="module" src="assets/js/main.js"></script>
-    <!-- n8n config + client -->
-    <script src="assets/js/n8n-config.js"></script>
-    <script type="module" src="assets/js/n8n.js"></script>
+    <!-- n8n 연동 제거: 관리자 제출로만 동작 -->
     <script type="module" src="assets/js/timetable.js"></script>
   </body>
   </html>

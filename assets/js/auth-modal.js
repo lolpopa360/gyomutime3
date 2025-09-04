@@ -7,6 +7,14 @@ const ADMIN_EMAIL = 'yangchanhee11@gmail.com'
 // Default admin code; can be overridden by backend config.
 const DEFAULT_ADMIN_CODE = '111308'
 
+function isLocalAdminEmail(email) {
+  try {
+    const arr = JSON.parse(localStorage.getItem('app.users') || '[]')
+    if (!Array.isArray(arr)) return false
+    return arr.some(x => String(x?.email || '').toLowerCase() === String(email || '').toLowerCase() && String(x?.role) === '관리자')
+  } catch { return false }
+}
+
 async function loadFirebase() {
   // Try to initialize Firebase with provided config or fallback to stored config
   try {
@@ -53,6 +61,9 @@ function updateNav() {
   nav.querySelectorAll('[data-open="login"], [data-open="register"], [data-nav-account], [data-nav-logout]').forEach(n=>n.parentElement?.remove())
   const ul = nav.querySelector('ul')
   if (!ul) return
+  // Show/hide Admin Console link based on admin flag
+  const adminLink = nav.querySelector('[data-open-admin]')
+  if (adminLink) adminLink.parentElement.style.display = user?.isAdmin ? '' : 'none'
   if (user) {
     const liAcc = document.createElement('li')
     liAcc.innerHTML = `<a href="#" data-nav-account>${user.email}</a>`
@@ -100,7 +111,16 @@ async function main() {
     if (!(t instanceof Element)) return
     if (t.closest('[data-open="login"]')) { e.preventDefault(); openModal('choice') }
     if (t.closest('[data-open="register"]')) { e.preventDefault(); openModal('choice') }
-    if (t.closest('[data-open-admin]')) { e.preventDefault(); openModal('admin') }
+    if (t.closest('[data-open-admin]')) {
+      e.preventDefault()
+      const u = getUser()
+      if (!u || !u.isAdmin) { alert('관리자 전용 메뉴입니다.'); return }
+      openModal('admin')
+      // If admin, hide email field and prefill
+      const f = document.getElementById('admin-form')
+      const emailLabel = f?.querySelector('label input[name="email"]')?.closest('label')
+      if (emailLabel) { emailLabel.style.display = 'none'; const input = emailLabel.querySelector('input'); if (input) input.value = u.email || '' }
+    }
     if (t.closest('[data-close="modal"]')) { e.preventDefault(); closeModal() }
     const sw = t.closest('[data-switch]')?.getAttribute('data-switch')
     if (sw) { e.preventDefault(); openModal(sw) }
@@ -120,7 +140,7 @@ async function main() {
       if (fb?.signInWithEmailAndPassword && fb?.auth?.app?.options?.apiKey !== 'demo') {
         await fb.signInWithEmailAndPassword(fb.auth, email, password)
       }
-      const isAdmin = email === ADMIN_EMAIL
+      const isAdmin = email === ADMIN_EMAIL || isLocalAdminEmail(email)
       setUser({ email, isAdmin })
       closeModal()
     } catch (err) {
@@ -141,7 +161,7 @@ async function main() {
         if (methods && methods.length > 0) throw new Error('이미 존재하는 계정입니다. 로그인 해주세요.')
         await fb.createUserWithEmailAndPassword(fb.auth, email, password)
       }
-      setUser({ email, isAdmin: email === ADMIN_EMAIL })
+      setUser({ email, isAdmin: email === ADMIN_EMAIL || isLocalAdminEmail(email) })
       closeModal()
     } catch (err) {
       showErr('auth-error-reg', '회원가입 실패: ' + (err?.message || '오류'))
@@ -165,7 +185,7 @@ async function main() {
           throw e
         }
         const email = result?.user?.email || 'user@google'
-        setUser({ email, isAdmin: email === ADMIN_EMAIL })
+        setUser({ email, isAdmin: email === ADMIN_EMAIL || isLocalAdminEmail(email) })
         closeModal()
       } else {
         alert('Firebase 설정이 필요합니다.')
@@ -183,7 +203,7 @@ async function main() {
       if (!fb?.auth) throw new Error('no_auth')
       const u = fb.auth.currentUser
       if (!u) throw new Error('로그인이 필요합니다. 먼저 로그인해주세요.')
-      if ((u.email || '') !== ADMIN_EMAIL) throw new Error('관리자 이메일로 로그인해야 합니다.')
+      if ((u.email || '') !== ADMIN_EMAIL) throw new Error('not_superadmin')
       const idToken = await u.getIdToken()
       const resp = await fetch('/.netlify/functions/auth/verifyAdmin', {
         method: 'POST',
@@ -201,13 +221,19 @@ async function main() {
   document.getElementById('admin-form')?.addEventListener('submit', async (e) => {
     e.preventDefault()
     const fd = new FormData(e.currentTarget)
-    const email = String(fd.get('email')||'')
+    const current = getUser()
+    const email = current?.email || String(fd.get('email')||'')
     const code = String(fd.get('adminCode')||'')
     let ok = false
-    // Try backend verification first
-    ok = await verifyAdminWithBackend(code)
-    // Fallback to local default code if backend not available
-    if (!ok && email === ADMIN_EMAIL && code === DEFAULT_ADMIN_CODE) ok = true
+    // Try backend verification only for super admin; others use local PIN
+    if (email === ADMIN_EMAIL) {
+      ok = await verifyAdminWithBackend(code)
+    }
+    // Local PIN for any allowed admin email
+    if (!ok) {
+      const allowed = email === ADMIN_EMAIL || isLocalAdminEmail(email)
+      if (allowed && code === DEFAULT_ADMIN_CODE) ok = true
+    }
     if (ok) {
       setUser({ email: email || ADMIN_EMAIL, isAdmin: true })
       closeModal()

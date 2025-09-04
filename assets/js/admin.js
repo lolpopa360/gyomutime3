@@ -24,7 +24,12 @@ function getSessionUser() {
 }
 function isAdminSession() {
   const u = getSessionUser();
-  return Boolean(u && u.isAdmin && u.email === ADMIN_EMAIL)
+  if (!u || !u.email) return false;
+  if (u.email === ADMIN_EMAIL) return true;
+  try {
+    const arr = JSON.parse(localStorage.getItem('app.users') || '[]');
+    return Array.isArray(arr) && arr.some(x => String(x?.email || '').toLowerCase() === String(u.email).toLowerCase() && String(x?.role) === '관리자');
+  } catch { return false; }
 }
 function logout() { localStorage.removeItem('site.user'); location.href = 'index.html'; }
 
@@ -403,12 +408,22 @@ function renderUsersTab(panel) {
   panel.innerHTML = `
     <div class="admin-grid">
       ${card(`
-        <h3>사용자 추가</h3>
-        <form id="user-form" class="admin-form" style="display:grid;gap:.75rem;">
-          <label>이름<input name="name" required /></label>
-          <label>역할<select name="role"><option>관리자</option><option>에디터</option><option>뷰어</option></select></label>
-          <button class="btn btn--primary" type="submit">추가</button>
+        <h3>사용자 추가 (수동)</h3>
+        <form id=\"user-form\" class=\"admin-form\" style=\"display:grid;gap:.75rem;\">
+          <label>이메일<input name=\"email\" type=\"email\" required placeholder=\"admin@example.com\" /></label>
+          <label>이름<input name=\"name\" placeholder=\"이름(선택)\" /></label>
+          <label>역할<select name=\"role\"><option>관리자</option><option>에디터</option><option>뷰어</option></select></label>
+          <button class=\"btn btn--primary\" type=\"submit\">추가</button>
         </form>
+      `)}
+      ${card(`
+        <h3>현재 사용자 (Firebase)</h3>
+        <form id="user-search-form" class="admin-form" style="display:grid;gap:.5rem;grid-template-columns:1fr auto;align-items:center;">
+          <input id="user-search-q" placeholder="이메일 또는 이름으로 검색" />
+          <button class="btn" type="submit">검색</button>
+        </form>
+        <div id="user-search-info" class="muted" style="margin-top:.25rem;"></div>
+        <div id="user-search-results" style="margin-top:.5rem;"></div>
       `)}
       ${card(`
         <h3>사용자 목록</h3>
@@ -417,41 +432,147 @@ function renderUsersTab(panel) {
     </div>
   `;
 
+  // Local list rendering
   const mount = $('#user-list-admin', panel);
-  const render = () => {
+  const renderLocal = () => {
     const arr = readArray(KEYS.users);
     if (!arr.length) { mount.innerHTML = '<p style="color:var(--color-text-muted);">등록된 사용자가 없습니다.</p>'; return; }
     mount.innerHTML = `
       <ul style="list-style:none;padding:0;display:grid;gap:.5rem;">
         ${arr.map(u => `
           <li style="display:flex;justify-content:space-between;gap:1rem;border:1px solid var(--color-border);border-radius:.5rem;padding:.6rem .75rem;background:var(--color-surface-2);">
-            <div><strong>${u.name}</strong> <small style="color:var(--color-text-muted);">(${u.role})</small></div>
+            <div><strong>${u.email || ''}</strong> ${u.name ? `<small class=\"muted\" style=\"margin-left:.35rem;\">${u.name}</small>` : ''} <small style=\"color:var(--color-text-muted);\">(${u.role})</small></div>
             <div style="display:flex;gap:.35rem;">
               <button class="btn" data-del="${u.id}">삭제</button>
             </div>
           </li>`).join('')}
       </ul>`;
   };
-  render();
+  renderLocal();
 
+  // Local list interactions and add from search results
   panel.addEventListener('click', (e) => {
     const t = e.target;
     if (!(t instanceof Element)) return;
     const del = t.getAttribute('data-del');
+    const add = t.closest('[data-add-user]');
     if (del) {
       write(KEYS.users, readArray(KEYS.users).filter(x => String(x.id) !== String(del)));
-      render();
+      renderLocal();
+      return;
+    }
+    if (add) {
+      const name = add.getAttribute('data-name') || '';
+      const email = add.getAttribute('data-email') || '';
+      const role = add.getAttribute('data-role') || '뷰어';
+      const arr = readArray(KEYS.users);
+      arr.push({ id: String(Date.now()), email, name, role });
+      write(KEYS.users, arr);
+      renderLocal();
     }
   });
 
+  // Manual add submit
   $('#user-form', panel)?.addEventListener('submit', (e) => {
     e.preventDefault();
     const fd = new FormData(e.currentTarget);
     const arr = readArray(KEYS.users);
-    arr.push({ id: String(Date.now()), name: String(fd.get('name')||''), role: String(fd.get('role')||'뷰어') });
+    const email = String(fd.get('email')||'').trim();
+    if (!email) { alert('이메일을 입력하세요.'); return; }
+    if (arr.some(x => String(x.email||'').toLowerCase() === email.toLowerCase())) { alert('이미 등록된 이메일입니다.'); return; }
+    arr.push({ id: String(Date.now()), email, name: String(fd.get('name')||''), role: String(fd.get('role')||'뷰어') });
     write(KEYS.users, arr);
     e.currentTarget.reset();
-    render();
+    renderLocal();
+  });
+
+  // Firebase search wiring
+  const resultsMount = $('#user-search-results', panel);
+  const info = $('#user-search-info', panel);
+
+  async function fetchUsers({ q = '', pageToken = '', limit = 20 } = {}) {
+    try {
+      const token = await getIdToken();
+      if (!token) throw new Error('Firebase 로그인 필요 (관리자 이메일)');
+      const resp = await fetch('/.netlify/functions/users/search', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json', authorization: `Bearer ${token}` },
+        body: JSON.stringify({ q, pageToken, limit })
+      });
+      const data = await resp.json().catch(()=>({}));
+      if (!resp.ok) throw new Error(data?.error?.message || '요청 실패');
+      return data;
+    } catch (err) {
+      info.textContent = '현재 사용자 목록을 불러오지 못했습니다: ' + (err?.message || '오류');
+      resultsMount.innerHTML = '';
+      return { users: [], nextPageToken: null };
+    }
+  }
+
+  function renderResults(items = [], nextPageToken = null, q = '') {
+    if (!items.length) {
+      resultsMount.innerHTML = '<p class="muted">검색 결과가 없습니다.</p>';
+      return;
+    }
+    resultsMount.innerHTML = `
+      <ul style="list-style:none;padding:0;display:grid;gap:.5rem;">
+        ${items.map(u => {
+          const name = (u.displayName || u.email || '').replace(/</g,'&lt;');
+          const role = u.role || '일반';
+          return `
+            <li style="display:flex;justify-content:space-between;gap:1rem;border:1px solid var(--color-border);border-radius:.5rem;padding:.6rem .75rem;background:var(--color-surface-2);">
+              <div>
+                <strong>${name}</strong>
+                <small class="muted">${u.email || ''}${role ? ` • ${role}` : ''}</small>
+              </div>
+              <div style="display:flex;gap:.35rem;align-items:center;">
+                <select data-role-pick style="min-width:7rem;" aria-label="역할">
+                  <option value="관리자">관리자</option>
+                  <option value="에디터">에디터</option>
+                  <option value="뷰어" selected>뷰어</option>
+                </select>
+                <button class=\"btn\" data-add-user data-name=\"${name}\" data-email=\"${(u.email||'').replace(/"/g,'&quot;')}\" data-role=\"뷰어\">목록에 추가</button>
+              </div>
+            </li>`;
+        }).join('')}
+      </ul>
+      ${nextPageToken ? `<div style="margin-top:.5rem;"><button class="btn" id="user-search-next">더 보기</button></div>` : ''}
+    `;
+
+    // sync selected role to add button
+    resultsMount.querySelectorAll('[data-role-pick]')?.forEach((sel) => {
+      sel.addEventListener('change', () => {
+        const wrap = sel.closest('li');
+        const btn = wrap?.querySelector('[data-add-user]');
+        if (btn) btn.setAttribute('data-role', sel.value);
+      });
+    });
+
+    const nextBtn = document.getElementById('user-search-next');
+    if (nextBtn) {
+      nextBtn.addEventListener('click', async () => {
+        const more = await fetchUsers({ q, pageToken: nextPageToken, limit: 20 });
+        renderResults(more.users || [], more.nextPageToken || null, q);
+      }, { once: true });
+    }
+  }
+
+  // Initial load (first page, no filter)
+  (async () => {
+    info.textContent = '불러오는 중...';
+    const data = await fetchUsers({ q: '', pageToken: '', limit: 20 });
+    info.textContent = data.users?.length ? `총 ${data.users.length}명 표시` : '';
+    renderResults(data.users || [], data.nextPageToken || null, '');
+  })();
+
+  // Search submit
+  $('#user-search-form', panel)?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const q = String($('#user-search-q', panel)?.value || '').trim();
+    info.textContent = '검색 중...';
+    const data = await fetchUsers({ q, pageToken: '', limit: 20 });
+    info.textContent = data.users?.length ? `검색 결과 ${data.users.length}명` : '검색 결과가 없습니다.';
+    renderResults(data.users || [], data.nextPageToken || null, q);
   });
 }
 
