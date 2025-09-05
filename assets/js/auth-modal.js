@@ -4,8 +4,6 @@
 import { logger } from './utils/logger.js'
 
 const ADMIN_EMAIL = 'yangchanhee11@gmail.com'
-// Default admin code; can be overridden by backend config.
-const DEFAULT_ADMIN_CODE = '111308'
 
 function isLocalAdminEmail(email) {
   try {
@@ -16,29 +14,21 @@ function isLocalAdminEmail(email) {
 }
 
 async function loadFirebase() {
-  // Try to initialize Firebase with provided config or fallback to stored config
+  // Initialize Firebase strictly from provided config (no embedded defaults)
   try {
-    const embeddedCfg = {
-      apiKey: "AIzaSyCtKBMC_l_YTtTIGuvWil4hAMO2SxLutnA",
-      authDomain: "gyomutime-ea929.firebaseapp.com",
-      projectId: "gyomutime-ea929",
-      storageBucket: "gyomutime-ea929.firebasestorage.app",
-      messagingSenderId: "1018950329432",
-      appId: "1:1018950329432:web:c42c417a9138e0f4a0962d",
-      measurementId: "G-N31BTHB5C2"
-    }
     const cfgStr = window.VITE_FIREBASE_CONFIG || localStorage.getItem('VITE_FIREBASE_CONFIG')
-    const cfg = cfgStr ? JSON.parse(cfgStr) : embeddedCfg
+    if (!cfgStr) throw new Error('Firebase 설정이 없습니다. (VITE_FIREBASE_CONFIG)')
+    const cfg = JSON.parse(cfgStr)
     const [{ initializeApp }, { getAuth, GoogleAuthProvider, signInWithEmailAndPassword, createUserWithEmailAndPassword, signInWithPopup, signOut, fetchSignInMethodsForEmail, linkWithCredential, EmailAuthProvider }] = await Promise.all([
       import('https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js'),
       import('https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js'),
     ])
-    const app = initializeApp(cfg || { apiKey: 'demo', projectId: 'demo' })
+    const app = initializeApp(cfg)
     const auth = getAuth(app)
     auth.useDeviceLanguage()
     return { auth, GoogleAuthProvider, signInWithEmailAndPassword, createUserWithEmailAndPassword, signInWithPopup, signOut, fetchSignInMethodsForEmail, linkWithCredential, EmailAuthProvider }
   } catch (err) {
-    logger.warn('Firebase not available; falling back to local demo', err)
+    logger.warn('Firebase not available (no config)', err)
     return null
   }
 }
@@ -61,9 +51,9 @@ function updateNav() {
   nav.querySelectorAll('[data-open="login"], [data-open="register"], [data-nav-account], [data-nav-logout]').forEach(n=>n.parentElement?.remove())
   const ul = nav.querySelector('ul')
   if (!ul) return
-  // Show/hide Admin Console link based on admin flag
+  // Always show Admin Console link; access is enforced on backend
   const adminLink = nav.querySelector('[data-open-admin]')
-  if (adminLink) adminLink.parentElement.style.display = user?.isAdmin ? '' : 'none'
+  if (adminLink) adminLink.parentElement.style.display = ''
   if (user) {
     const liAcc = document.createElement('li')
     liAcc.innerHTML = `<a href="#" data-nav-account>${user.email}</a>`
@@ -114,12 +104,12 @@ async function main() {
     if (t.closest('[data-open-admin]')) {
       e.preventDefault()
       const u = getUser()
-      if (!u || !u.isAdmin) { alert('관리자 전용 메뉴입니다.'); return }
+      if (!u) { alert('로그인 후 이용하세요.'); openModal('login'); return }
       openModal('admin')
       // If admin, hide email field and prefill
       const f = document.getElementById('admin-form')
       const emailLabel = f?.querySelector('label input[name="email"]')?.closest('label')
-      if (emailLabel) { emailLabel.style.display = 'none'; const input = emailLabel.querySelector('input'); if (input) input.value = u.email || '' }
+      if (emailLabel) { const input = emailLabel.querySelector('input'); if (input) input.value = u.email || '' }
     }
     if (t.closest('[data-close="modal"]')) { e.preventDefault(); closeModal() }
     const sw = t.closest('[data-switch]')?.getAttribute('data-switch')
@@ -213,7 +203,7 @@ async function main() {
       if (!resp.ok) throw new Error((await resp.json()).error?.message || '실패')
       return true
     } catch (err) {
-      logger.warn('verifyAdminWithBackend failed, fallback to local check', err)
+      logger.warn('verifyAdminWithBackend failed', err)
       return false
     }
   }
@@ -224,16 +214,8 @@ async function main() {
     const current = getUser()
     const email = current?.email || String(fd.get('email')||'')
     const code = String(fd.get('adminCode')||'')
-    let ok = false
-    // Try backend verification only for super admin; others use local PIN
-    if (email === ADMIN_EMAIL) {
-      ok = await verifyAdminWithBackend(code)
-    }
-    // Local PIN for any allowed admin email
-    if (!ok) {
-      const allowed = email === ADMIN_EMAIL || isLocalAdminEmail(email)
-      if (allowed && code === DEFAULT_ADMIN_CODE) ok = true
-    }
+    if (email !== ADMIN_EMAIL) { alert('슈퍼관리자 이메일로만 인증할 수 있습니다.'); return }
+    const ok = await verifyAdminWithBackend(code)
     if (ok) {
       setUser({ email: email || ADMIN_EMAIL, isAdmin: true })
       closeModal()
@@ -245,38 +227,30 @@ async function main() {
 
   updateNav()
 
-  // Templates default seed if missing
-  try {
-    if (!localStorage.getItem('app.templates')) {
-      const csv1 = '교사,과목,가능시간\n김선생,수학,월1;화2;수3\n;' 
-      const csv2 = '학생ID,수학심화,물리학,화학\n2024001,1,0,1\n2024002,0,1,0\n'
-      const seed = [
-        { id: 'timetable', title: '시간표 데이터 예시 (CSV)', description: '교사/교실/가능시간 등 구성', filename: 'timetable_template.csv', mime: 'text/csv', data: btoa(unescape(encodeURIComponent(csv1))) },
-        { id: 'grouping', title: '선택과목 분반 예시 (CSV)', description: '학생 선호도 매트릭스', filename: 'grouping_template.csv', mime: 'text/csv', data: btoa(unescape(encodeURIComponent(csv2))) },
-      ]
-      localStorage.setItem('app.templates', JSON.stringify(seed))
-    }
-  } catch {}
+  // Deprecated: local template seed (replaced by backend + manifest). Keeping manifest fallback below.
 
   // Render downloads on landing
   async function renderTemplates() {
     const mount = document.getElementById('template-list'); if (!mount) return
 
-    // 1) Load local (admin-set) templates from localStorage
-    let localArr = []
-    try { localArr = JSON.parse(localStorage.getItem('app.templates') || '[]') } catch { localArr = [] }
+    // 1) Load backend templates (shared for all users)
+    let serverArr = []
+    try {
+      const r = await fetch('/.netlify/functions/templates/list', { method: 'GET' })
+      if (r.ok) { const j = await r.json(); serverArr = Array.isArray(j.items) ? j.items : [] }
+    } catch {}
 
-    // 2) Load public templates manifest (shared for all users)
+    // 2) Load public templates manifest (static fallback)
     let manifestArr = []
     try {
       const resp = await fetch('assets/templates/manifest.json', { cache: 'no-store' })
       if (resp.ok) manifestArr = await resp.json()
     } catch {}
 
-    // 3) Merge (local overrides manifest on id collision)
+    // 3) Merge (server overrides manifest on id collision)
     const byId = {}
     for (const t of manifestArr || []) { const k = String(t.id || t.filename || t.url || Math.random()); byId[k] = t }
-    for (const t of localArr || []) { const k = String(t.id || t.filename || t.url || Math.random()); byId[k] = { ...(byId[k] || {}), ...t } }
+    for (const t of serverArr || []) { const k = String(t.id || t.filename || t.url || Math.random()); byId[k] = { ...(byId[k] || {}), ...t } }
     const arr = Object.values(byId)
 
     if (!arr.length) { mount.innerHTML = '<p class="muted">등록된 양식이 없습니다.</p>'; return }
@@ -292,28 +266,17 @@ async function main() {
     `).join('')
 
     mount.querySelectorAll('[data-dl]')?.forEach(btn => {
-      btn.addEventListener('click', () => {
+      btn.addEventListener('click', async () => {
         const id = btn.getAttribute('data-dl')
         const t = arr.find(x=> String(x.id || x.filename || x.url) === String(id))
         if (!t) return
-        if (t.url) {
-          const a = document.createElement('a'); a.href = t.url; a.download = t.filename || ''; a.click()
-          return
-        }
-        if (t.data) {
-          try {
-            // Decode base64 to bytes for correctness
-            const b64 = t.data
-            const bin = atob(b64)
-            const len = bin.length
-            const bytes = new Uint8Array(len)
-            for (let i=0; i<len; i++) bytes[i] = bin.charCodeAt(i)
-            const blob = new Blob([bytes], { type: t.mime || 'application/octet-stream' })
-            const url = URL.createObjectURL(blob)
-            const a = document.createElement('a'); a.href = url; a.download = t.filename || 'template.dat'; a.click()
-            setTimeout(()=> URL.revokeObjectURL(url), 1000)
-          } catch {}
-        }
+        if (t.url && !t.id) { const a = document.createElement('a'); a.href = t.url; a.download = t.filename || ''; a.click(); return }
+        try {
+          const r = await fetch('/.netlify/functions/templates/downloadUrl', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ id: t.id || id }) })
+          if (!r.ok) throw new Error('download_failed')
+          const { downloadUrl } = await r.json()
+          const a = document.createElement('a'); a.href = downloadUrl; a.download = t.filename || ''; a.target = '_blank'; a.click()
+        } catch {}
       })
     })
   }

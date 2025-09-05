@@ -8,23 +8,15 @@ function setYear(){ const el = $('#year'); if (el) el.textContent = String(new D
 
 async function loadFirebase() {
   try {
-    const embeddedCfg = {
-      apiKey: "AIzaSyCtKBMC_l_YTtTIGuvWil4hAMO2SxLutnA",
-      authDomain: "gyomutime-ea929.firebaseapp.com",
-      projectId: "gyomutime-ea929",
-      storageBucket: "gyomutime-ea929.firebasestorage.app",
-      messagingSenderId: "1018950329432",
-      appId: "1:1018950329432:web:c42c417a9138e0f4a0962d",
-      measurementId: "G-N31BTHB5C2"
-    }
     const cfgStr = window.VITE_FIREBASE_CONFIG || localStorage.getItem('VITE_FIREBASE_CONFIG')
-    const cfg = cfgStr ? JSON.parse(cfgStr) : embeddedCfg
+    if (!cfgStr) throw new Error('Firebase 설정이 없습니다. (VITE_FIREBASE_CONFIG)')
+    const cfg = JSON.parse(cfgStr)
     const [{ initializeApp }, { getAuth, onAuthStateChanged }, { getFirestore, collection, query, orderBy, onSnapshot } ] = await Promise.all([
       import('https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js'),
       import('https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js'),
       import('https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js'),
     ])
-    const app = initializeApp(cfg || { apiKey: 'demo', projectId: 'demo' })
+    const app = initializeApp(cfg)
     const auth = getAuth(app); auth.useDeviceLanguage()
     const db = getFirestore(app)
     return { auth, onAuthStateChanged, db, collection, query, orderBy, onSnapshot }
@@ -168,8 +160,14 @@ async function main(){
     // CSV export
     $('#export-csv')?.addEventListener('click', () => {
       const headers = ['id','ownerEmail','title','status','category','createdAt']
+      const sanitizeCell = (val) => {
+        const s = String(val ?? '')
+        const needsEscape = /^[=+\-@]/.test(s)
+        const safe = needsEscape ? `'${s}` : s
+        return `"${safe.replaceAll('"','""')}"`
+      }
       const rows = items.map(it => [it.id, it.ownerEmail||'', it.title||'', it.status||'', it.category||'', fmtTime(it.createdAt)])
-      const csv = [headers, ...rows].map(r => r.map(v => `"${String(v).replaceAll('"','""')}"`).join(',')).join('\n')
+      const csv = [headers, ...rows].map(r => r.map(sanitizeCell).join(',')).join('\n')
       const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
       const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href=url; a.download='submissions.csv'; a.click(); setTimeout(()=>URL.revokeObjectURL(url), 1000)
     })

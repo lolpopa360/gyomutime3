@@ -1,0 +1,136 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="color-scheme" content="dark light" />
+    <title>교무타임 • 선택과목 편성</title>
+    <link rel="icon" href="assets/img/favicon.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="assets/css/styles.css" />
+    <style>
+      .toolbar { display:flex; flex-wrap:wrap; gap:.6rem; align-items:center; }
+      .toolbar .group { display:flex; gap:.5rem; align-items:center; }
+      .scroll-x { overflow:auto; }
+      .table-sticky thead th { position: sticky; top: 0; background: var(--color-surface); z-index: 2; }
+      .table-sticky tfoot td { position: sticky; bottom: 0; background: var(--color-surface-2); z-index: 1; }
+      .warn { outline: 2px solid #ef4444; border-radius:.25rem; }
+      .muted { color: var(--color-text-muted); }
+      .caps { font-variant: all-small-caps; letter-spacing: .02em; }
+      .mini { font-size:.85rem; }
+      .cell-num { inline-size:4.5rem; }
+      .cell-cap { inline-size:4.5rem; }
+      .cell-blockmax { inline-size:5.5rem; }
+      .sr { position:absolute; left:-10000px; top:auto; width:1px; height:1px; overflow:hidden; }
+    </style>
+  </head>
+  <body>
+    <a class="skip-link" href="#main">본문으로 바로가기</a>
+    <header class="site-header" role="banner">
+      <div class="container header__inner">
+        <a href="index.html" class="brand" aria-label="교무타임 홈" style="gap:.5rem;">
+          <img src="assets/img/logo.svg" alt="교무타임" width="24" height="24" />
+          <span>
+            <strong>교무타임</strong>
+            <small class="muted" style="display:block; font-size:.72rem; line-height:1;">Gyomutime</small>
+          </span>
+        </a>
+        <nav class="site-nav" role="navigation" id="site-nav">
+          <ul>
+            <li><a href="index.html#features">서비스</a></li>
+            <li><a href="#" data-action="toggle-theme">테마 전환</a></li>
+            <li><a href="index.html">홈으로</a></li>
+          </ul>
+        </nav>
+      </div>
+    </header>
+
+    <main id="main" tabindex="-1">
+      <section class="hero">
+        <div class="container" style="text-align:center;">
+          <div class="pill"><span class="dot"></span>선택과목 편성/정원 입력</div>
+          <h1 style="margin-top:.8rem;">선택과목 편성</h1>
+          <p class="muted">데이터 파일을 불러와 과목별 분반 수와 정원을 블록별로 입력·저장합니다.</p>
+        </div>
+      </section>
+
+      <section class="section">
+        <div class="container" style="display:grid; gap: var(--space-4);">
+          <div class="card">
+            <div class="toolbar" aria-label="도구">
+              <div class="group">
+                <label class="btn" style="position:relative; overflow:hidden;">
+                  파일 불러오기
+                  <input id="file-input" type="file" accept=".csv,.xlsx,.xls,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel" style="position:absolute;inset:0;opacity:0;cursor:pointer;"/>
+                </label>
+                <span id="file-label" class="muted mini">선택된 파일 없음</span>
+              </div>
+              <div id="subject-start" class="group" style="display:none;">
+                <label class="mini">과목 시작 열
+                  <select id="subject-start-select"></select>
+                </label>
+                <span id="subject-start-hint" class="muted mini"></span>
+              </div>
+              <div class="group">
+                <label class="mini">학기/버전<input id="term-id" placeholder="예: 2025-1"/></label>
+              </div>
+              <div class="group" style="margin-left:auto;">
+                <button id="generate-btn" class="btn btn--primary">표 생성</button>
+                <button id="export-btn" class="btn">CSV 내보내기</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="card scroll-x">
+            <div style="min-width:980px">
+              <table id="electives-table" class="table table-sticky" role="grid" aria-describedby="tbl-desc">
+                <caption id="tbl-desc" class="sr">과목별 분반 수/정원 입력 표</caption>
+                <thead id="tbl-head"></thead>
+                <tbody id="tbl-body"></tbody>
+                <tfoot id="tbl-foot"></tfoot>
+              </table>
+            </div>
+          </div>
+
+          
+          
+          <!-- 선택과목 분반 배정 섹션(통합) -->
+          <section class="section" aria-label="선택과목 분반 배정" style="padding:0;">
+            <div class="container" style="display:grid; gap: var(--space-4); grid-template-columns: 1fr;">
+              <div class="grid-2">
+                <div class="card">
+                  <h2 style="margin:0 0 .5rem 0;">선택과목 분반 배정</h2>
+                  <p class="muted">위에서 만든 표 데이터를 바탕으로 담당자 정보와 제약만 입력하면 됩니다. 파일을 다시 업로드할 필요가 없습니다.</p>
+                  <div style="display:grid; gap: .8rem; margin-top:1rem;" id="grouping-form">
+                    <label>담당자 이름 *<input id="gr-name" placeholder="담당자 성함을 입력해주세요" required /></label>
+                    <label>담당자 이메일 *<input id="gr-email" type="email" placeholder="you@example.com" required /></label>
+                    <div class="card" style="background:var(--color-surface-2);">
+                      <h3 style="margin:0 0 .25rem 0;">분반 제약 조건</h3>
+                      <p class="muted">정원은 위 표에서 과목별로 입력합니다. 전역 정원 제약은 사용하지 않습니다.</p>
+                      <div style="display:grid; grid-template-columns:repeat(2,1fr); gap:.5rem;">
+                        <label>선택 슬롯 최소 과목 수<input id="gr-min-slots" type="number" value="1" min="0" /></label>
+                        <label>선택 슬롯 최대 과목 수<input id="gr-max-slots" type="number" value="3" min="1" /></label>
+                      </div>
+                    </div>
+                    <label>특이 사항 (선택)
+                      <textarea id="gr-notes" rows="4" placeholder="예: 특정 과목 예외 정원, 반드시 배정해야 하는 학생 등"></textarea>
+                    </label>
+                    <div style="display:flex; gap:.5rem; align-items:center;">
+                      <button id="gr-submit" class="btn btn--primary" type="button">배정 요청 제출</button>
+                      <span class="muted" id="gr-status"></span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </section>
+        </div>
+      </section>
+    </main>
+
+    <footer class="site-footer" role="contentinfo">
+      <div class="container"><small>© <span id="year"></span> 교무타임</small></div>
+    </footer>
+
+    <script type="module" src="assets/js/electives.js"></script>
+  </body>
+  </html>

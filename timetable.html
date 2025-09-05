@@ -49,56 +49,61 @@
               <div style="display:grid; gap: .8rem; margin-top:1rem;">
                 <label>담당자 이름 *<input id="tt-name" placeholder="담당자 성함을 입력해주세요" /></label>
                 <label>담당자 이메일 *<input id="tt-email" type="email" placeholder="연락 가능한 이메일을 입력해주세요" /></label>
-                <label>시간표 데이터 파일 (.xlsx) *
+                <label>시간표 데이터 파일 (.xlsx/CSV) *
                   <div style="display:flex; gap:.5rem; align-items:center;">
                     <label class="btn" style="position:relative; overflow:hidden;">
                       파일 선택
-                      <input id="tt-file" type="file" accept=".xlsx,.csv" style="position:absolute;inset:0;opacity:0;cursor:pointer;"/>
+                      <input id="tt-file" type="file" accept=".xlsx,.xls,.csv" style="position:absolute;inset:0;opacity:0;cursor:pointer;"/>
                     </label>
                     <span id="tt-file-label" class="muted">선택된 파일 없음</span>
                   </div>
                 </label>
+                <div id="tt-sheet-wrap" style="display:none; align-items:center; gap:.5rem;">
+                  <label>시트 선택
+                    <select id="tt-sheet"></select>
+                  </label>
+                  <button id="tt-generate" class="btn btn--primary" type="button" disabled>전체 시트에서 교사 수집</button>
+                </div>
 
                 <div class="card" style="background:var(--color-surface-2);">
-                  <h3 style="margin:0 0 .25rem 0;">요일별 교시 수 설정</h3>
-                  <div style="display:grid; grid-template-columns:repeat(5,1fr); gap:.5rem;">
-                    <label>월요일<input id="tt-p-mon" type="number" min="0" max="15" value="7" inputmode="numeric" /></label>
-                    <label>화요일<input id="tt-p-tue" type="number" min="0" max="15" value="7" inputmode="numeric" /></label>
-                    <label>수요일<input id="tt-p-wed" type="number" min="0" max="15" value="7" inputmode="numeric" /></label>
-                    <label>목요일<input id="tt-p-thu" type="number" min="0" max="15" value="7" inputmode="numeric" /></label>
-                    <label>금요일<input id="tt-p-fri" type="number" min="0" max="15" value="7" inputmode="numeric" /></label>
+                  <h3 style="margin:0 0 .25rem 0;">특별실 / 교실 목록</h3>
+                  <p class="muted">파일에서 감지된 교실을 자동으로 채우고, 직접 추가/삭제할 수 있습니다.</p>
+                  <div id="tt-room-chips" class="mini" style="display:flex; gap:.4rem; flex-wrap:wrap; margin:.4rem 0;"></div>
+                  <div style="display:flex; gap:.4rem; align-items:center;">
+                    <input id="tt-room-input" placeholder="예: 과학실1" style="inline-size:14rem;"/>
+                    <button id="tt-room-add" class="btn" type="button">추가</button>
                   </div>
                 </div>
 
                 <div class="card" style="background:var(--color-surface-2);">
-                  <div style="display:flex; justify-content:space-between; align-items:center; gap:.5rem;">
-                    <h3 style="margin:0 0 .25rem 0;">이동수업 연속 제한</h3>
-                    <button class="btn" id="move-none">사용하지 않음</button>
+                  <h3 style="margin:0 0 .25rem 0;">교사 제약(전체 최대 연속, 예외/특별실)</h3>
+                  <div class="toolbar" style="margin:.25rem 0 .5rem 0; gap:.75rem;">
+                    <label>전체 교사 최대 연속 수업수 <input id="tt-global-max" type="number" min="0" max="10" value="2" class="cell-num"/></label>
                   </div>
-                  <div style="display:grid; gap:.75rem;">
-                    <div>
-                      <strong>적용 학년 (중복 선택)</strong>
-                      <div style="display:grid; grid-template-columns:1fr 1fr; gap:.75rem; margin-top:.35rem;">
-                        <div class="card" style="background:var(--color-surface);">
-                          <div style="font-weight:600; margin-bottom:.25rem;">중학교</div>
-                          <label style="display:flex; gap:.5rem; align-items:center;"><input type="checkbox" class="chk-grade" value="MS1"> 1학년</label>
-                          <label style="display:flex; gap:.5rem; align-items:center;"><input type="checkbox" class="chk-grade" value="MS2"> 2학년</label>
-                          <label style="display:flex; gap:.5rem; align-items:center;"><input type="checkbox" class="chk-grade" value="MS3"> 3학년</label>
-                        </div>
-                        <div class="card" style="background:var(--color-surface);">
-                          <div style="font-weight:600; margin-bottom:.25rem;">고등학교</div>
-                          <label style="display:flex; gap:.5rem; align-items:center;"><input type="checkbox" class="chk-grade" value="HS1"> 1학년</label>
-                          <label style="display:flex; gap:.5rem; align-items:center;"><input type="checkbox" class="chk-grade" value="HS2"> 2학년</label>
-                          <label style="display:flex; gap:.5rem; align-items:center;"><input type="checkbox" class="chk-grade" value="HS3"> 3학년</label>
-                        </div>
-                      </div>
-                    </div>
-                    <div>
-                      <label>최대 연속 이동수업 수 <input id="max-move" type="number" min="0" max="10" value="2" inputmode="numeric" /></label>
-                      <div class="muted" style="margin-top:.25rem;">선택한 학년의 선택과목을 연속으로 몇 교시까지 배치할지 설정</div>
+                  <div class="toolbar" style="margin:.25rem 0 .5rem 0; gap:.5rem;">
+                    <label class="mini">교사 선택
+                      <select id="tt-teacher-select" style="inline-size:18rem;"></select>
+                    </label>
+                    <button id="tt-add-teacher" class="btn" type="button">예외 추가</button>
+                  </div>
+                  <div class="scroll-x">
+                    <div style="min-width:860px">
+                      <table id="tt-teachers-table" class="table table-sticky">
+                        <thead>
+                          <tr>
+                            <th>교사</th>
+                            <th>과목/비고</th>
+                            <th>개인 최대 연속(예외)</th>
+                            <th>출입 제한 특별실(쉼표로 여러 개)</th>
+                          </tr>
+                        </thead>
+                        <tbody id="tt-teachers-body"></tbody>
+                      </table>
                     </div>
                   </div>
                 </div>
+
+                <!-- 요일별 교시/이동수업 제약 섹션 제거 (요청) -->
 
                 <div class="card" style="background:var(--color-surface-2);">
                   <h3 style="margin:0 0 .25rem 0;">특정 교사 시간 제외 설정</h3>
@@ -167,5 +172,7 @@
     <script type="module" src="assets/js/main.js"></script>
     <!-- n8n 연동 제거: 관리자 제출로만 동작 -->
     <script type="module" src="assets/js/timetable.js"></script>
+
+    <!-- 개인 최대 연속 모달 제거: 예외는 표에서 직접 숫자 입력 -->
   </body>
   </html>

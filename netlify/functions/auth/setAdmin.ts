@@ -5,6 +5,7 @@ import { withAuth, json, error, isSuperAdmin } from '../_lib/http';
 const handler: Handler = withAuth(async (req) => {
   try {
     if (!isSuperAdmin(req)) return error(403, 'forbidden', 'Only superadmin can call this');
+    if (!(req.token?.email_verified === true)) return error(403, 'forbidden', 'email not verified');
     const { email, make } = req.body || {};
     if (!email || typeof make !== 'boolean') return error(400, 'bad_request', 'email and make(boolean) required');
     const auth = getAuth();
@@ -25,4 +26,3 @@ const handler: Handler = withAuth(async (req) => {
 });
 
 export { handler };
-

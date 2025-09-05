@@ -11,6 +11,8 @@ const handler: Handler = withAuth(async (req) => {
     // Only allow bootstrap for the configured admin email
     if (req.email !== ADMIN_EMAIL) return error(403, 'forbidden', 'not allowed');
 
+    // Require verified email for bootstrap
+    if (!(req.token?.email_verified === true)) return error(403, 'forbidden', 'email not verified');
     const auth = getAuth();
     await auth.setCustomUserClaims(req.uid!, { role: 'admin' });
     await getFirestore().collection('admins').doc(req.email).set({ email: req.email, bootstrappedAt: new Date() }, { merge: true });
@@ -21,4 +23,3 @@ const handler: Handler = withAuth(async (req) => {
 });
 
 export { handler };
-

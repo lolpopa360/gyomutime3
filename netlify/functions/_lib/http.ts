@@ -195,7 +195,7 @@ export function withAuth(handler: (req: AuthedRequest) => Promise<any> | any): H
                     'unknown';
     const userAgent = event.headers['user-agent'] || 'unknown';
     
-    // Check rate limit
+    // Check rate limit (IP-based best-effort; consider external store for production)
     if (!checkRateLimit(clientIp)) {
       return error(429, 'rate_limit_exceeded', 'Too many requests. Please try again later.');
     }

@@ -4,7 +4,6 @@ import { getFirestore, getAuth } from '../_lib/firebaseAdmin';
 
 // Firestore document path to store admin config
 const ADMIN_DOC_PATH = 'config/admin';
-const DEFAULT_CODE = '111308';
 const ADMIN_EMAIL = 'yangchanhee11@gmail.com';
 
 const handler: Handler = withAuth(async (req) => {
@@ -18,8 +17,12 @@ const handler: Handler = withAuth(async (req) => {
 
     const db = getFirestore();
     const snap = await db.doc(ADMIN_DOC_PATH).get();
-    const stored = (snap.exists && (snap.data()?.code as string)) || DEFAULT_CODE;
-    if (String(code) !== String(stored)) return error(401, 'unauthorized', 'invalid code');
+    if (!snap.exists) return error(403, 'forbidden', 'admin code not set');
+    const stored = (snap.data()?.code as string);
+    if (!stored || String(code) !== String(stored)) return error(401, 'unauthorized', 'invalid code');
+
+    // Require email verified claim
+    if (!(req.token?.email_verified === true)) return error(403, 'forbidden', 'email not verified');
 
     // Grant admin role claim
     const auth = getAuth();
@@ -33,4 +36,3 @@ const handler: Handler = withAuth(async (req) => {
 });
 
 export { handler };
-

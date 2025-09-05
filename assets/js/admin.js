@@ -31,6 +31,16 @@ function isAdminSession() {
     return Array.isArray(arr) && arr.some(x => String(x?.email || '').toLowerCase() === String(u.email).toLowerCase() && String(x?.role) === '관리자');
   } catch { return false; }
 }
+
+async function hasFirebaseAdminClaim() {
+  try {
+    const fb = await loadFirebase();
+    const u = fb?.auth?.currentUser; if (!u) return false;
+    const token = await u.getIdToken(true);
+    const res = await u.getIdTokenResult(true);
+    return !!(token && res?.claims?.role === 'admin');
+  } catch { return false; }
+}
 function logout() { localStorage.removeItem('site.user'); location.href = 'index.html'; }
 
 // -------- UI helpers --------
@@ -309,6 +319,18 @@ function renderEventsTab(panel) {
 }
 
 // ---- Templates (downloadable sample files) ----
+async function authedFetch(path, body) {
+  const token = await getIdToken();
+  if (!token) { alert('인증이 필요합니다. 먼저 로그인 해주세요.'); throw new Error('no_token') }
+  const res = await fetch(`/.netlify/functions${path}`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json', 'authorization': `Bearer ${token}` },
+    body: JSON.stringify(body || {})
+  });
+  if (!res.ok) { const t = await res.text(); throw new Error(t || 'request_failed') }
+  return res.json();
+}
+
 function renderTemplatesTab(panel) {
   panel.innerHTML = `
     <div class="admin-grid">
@@ -332,11 +354,15 @@ function renderTemplatesTab(panel) {
     </div>
   `;
 
-  const readTpl = () => readArray(KEYS.templates)
-  const writeTpl = (arr) => write(KEYS.templates, arr)
+  const fetchList = async () => {
+    const res = await fetch('/.netlify/functions/templates/list', { method: 'GET' });
+    if (!res.ok) return [];
+    const { items } = await res.json();
+    return Array.isArray(items) ? items : [];
+  };
 
-  const renderList = () => {
-    const arr = readTpl()
+  const renderList = async () => {
+    const arr = await fetchList();
     if (!arr.length) { $('#tpl-list', panel).innerHTML = '<p style="color:var(--color-text-muted);">등록된 양식이 없습니다.</p>'; return }
     $('#tpl-list', panel).innerHTML = `
       <ul style="list-style:none;padding:0;display:grid;gap:.5rem;">
@@ -348,7 +374,7 @@ function renderTemplatesTab(panel) {
             </div>
             <div style="display:flex;gap:.35rem;">
               <button class="btn" data-dl="${t.id}">다운로드</button>
-              <button class="btn" data-edit="${t.id}">수정</button>
+              <button class="btn" data-edit="${t.id}" data-title="${encodeURIComponent(t.title||'')}" data-desc="${encodeURIComponent(t.description||'')}">수정</button>
               <button class="btn" data-del="${t.id}">삭제</button>
             </div>
           </li>`).join('')}
@@ -361,20 +387,26 @@ function renderTemplatesTab(panel) {
     if (!(t instanceof Element)) return
     const id = t.getAttribute('data-del') || t.getAttribute('data-edit') || t.getAttribute('data-dl')
     if (!id) return
-    const arr = readTpl()
-    const item = arr.find(x=> String(x.id)===String(id))
-    if (t.hasAttribute('data-del')) { writeTpl(arr.filter(x=> String(x.id)!==String(id))); renderList(); return }
-    if (t.hasAttribute('data-dl')) {
-      if (!item) return
-      const blob = new Blob([decodeURIComponent(escape(atob(item.data)))], { type: item.mime || 'application/octet-stream' })
-      const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href=url; a.download=item.filename||'template.dat'; a.click(); setTimeout(()=>URL.revokeObjectURL(url),1e3)
-      return
+    if (t.hasAttribute('data-del')) {
+      (async () => { try { await authedFetch('/templates/delete', { id }); await renderList(); } catch (e) { alert('삭제 실패'); } })();
+      return;
     }
-    if (t.hasAttribute('data-edit') && item) {
+    if (t.hasAttribute('data-dl')) {
+      (async () => {
+        try {
+          const r = await fetch('/.netlify/functions/templates/downloadUrl', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ id }) });
+          if (!r.ok) throw new Error('failed');
+          const { downloadUrl } = await r.json();
+          const a = document.createElement('a'); a.href = downloadUrl; a.download = ''; a.target = '_blank'; a.click();
+        } catch { alert('다운로드 링크 생성 실패'); }
+      })();
+      return;
+    }
+    if (t.hasAttribute('data-edit')) {
       const f = $('#tpl-form', panel)
-      f.id.value = item.id
-      f.title.value = item.title || ''
-      f.description.value = item.description || ''
+      f.id.value = id
+      f.title.value = decodeURIComponent(t.getAttribute('data-title') || '')
+      f.description.value = decodeURIComponent(t.getAttribute('data-desc') || '')
       alert('파일을 교체하려면 새 파일을 선택 후 저장하세요.')
     }
   })
@@ -383,23 +415,31 @@ function renderTemplatesTab(panel) {
     e.preventDefault()
     const f = e.currentTarget
     const fd = new FormData(f)
-    const id = String(fd.get('id') || Date.now())
-    const prev = readTpl().find(x=> String(x.id)===id)
+    const id = String(fd.get('id') || '')
     const file = f.file?.files?.[0]
-    let item
-    if (file) {
-      const buf = await file.arrayBuffer()
-      const data = btoa(String.fromCharCode.apply(null, new Uint8Array(buf)))
-      item = { id, title: String(fd.get('title')||''), description: String(fd.get('description')||''), filename: file.name, mime: file.type || 'application/octet-stream', data }
-    } else if (prev) {
-      item = { ...prev, title: String(fd.get('title')||prev.title||''), description: String(fd.get('description')||prev.description||'') }
-    } else {
-      alert('새 양식을 추가하려면 파일을 선택하세요.');
-      return
+    try {
+      if (file && !id) {
+        // Create new template and upload file
+        const meta = { title: String(fd.get('title')||''), description: String(fd.get('description')||''), filename: file.name, contentType: file.type || 'application/octet-stream', size: file.size };
+        const r = await authedFetch('/templates/create', meta);
+        await fetch(r.uploadUrl, { method: 'PUT', headers: { 'content-type': meta.contentType }, body: file });
+      } else if (file && id) {
+        // Replace file and update metadata
+        const r = await authedFetch('/templates/uploadUrl', { id, filename: file.name, contentType: file.type || 'application/octet-stream', size: file.size });
+        await fetch(r.uploadUrl, { method: 'PUT', headers: { 'content-type': file.type || 'application/octet-stream' }, body: file });
+        await authedFetch('/templates/update', { id, title: String(fd.get('title')||''), description: String(fd.get('description')||'') });
+      } else if (id) {
+        // Only metadata update
+        await authedFetch('/templates/update', { id, title: String(fd.get('title')||''), description: String(fd.get('description')||'') });
+      } else {
+        alert('새 양식을 추가하려면 파일을 선택하세요.');
+        return;
+      }
+      f.reset();
+      await renderList();
+    } catch (err) {
+      console.error(err); alert('저장에 실패했습니다.');
     }
-    const arr = readTpl();
-    const idx = arr.findIndex(x=> String(x.id)===id); if (idx>=0) arr[idx]=item; else arr.push(item)
-    writeTpl(arr); f.reset(); renderList()
   })
 }
 
@@ -724,14 +764,16 @@ function ensureDefaults() {
   if (!localStorage.getItem(KEYS.notices)) write(KEYS.notices, []);
   if (!localStorage.getItem(KEYS.events)) write(KEYS.events, []);
   if (!localStorage.getItem(KEYS.users)) write(KEYS.users, []);
-  if (!localStorage.getItem(KEYS.templates)) write(KEYS.templates, []);
+  // Deprecated local templates seed is no longer used (migrated to backend)
 }
 
-function main() {
+async function main() {
   ensureDefaults();
   const mount = document.getElementById('auth-wrap');
   document.getElementById('logout-btn')?.addEventListener('click', logout);
-  if (!isAdminSession()) renderLogin(mount); else renderApp(mount);
+  // Require verified admin token in production; no local fallbacks
+  const ok = await hasFirebaseAdminClaim();
+  if (ok) renderApp(mount); else renderLogin(mount);
 }
 
 if (document.readyState === 'loading') {

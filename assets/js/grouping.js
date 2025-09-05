@@ -5,22 +5,14 @@ const $ = (sel, root = document) => root.querySelector(sel)
 
 async function loadFirebase() {
   try {
-    const embeddedCfg = {
-      apiKey: "AIzaSyCtKBMC_l_YTtTIGuvWil4hAMO2SxLutnA",
-      authDomain: "gyomutime-ea929.firebaseapp.com",
-      projectId: "gyomutime-ea929",
-      storageBucket: "gyomutime-ea929.firebasestorage.app",
-      messagingSenderId: "1018950329432",
-      appId: "1:1018950329432:web:c42c417a9138e0f4a0962d",
-      measurementId: "G-N31BTHB5C2"
-    }
     const cfgStr = window.VITE_FIREBASE_CONFIG || localStorage.getItem('VITE_FIREBASE_CONFIG')
-    const cfg = cfgStr ? JSON.parse(cfgStr) : embeddedCfg
+    if (!cfgStr) throw new Error('Firebase 설정이 없습니다. (VITE_FIREBASE_CONFIG)')
+    const cfg = JSON.parse(cfgStr)
     const [{ initializeApp }, { getAuth } ] = await Promise.all([
       import('https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js'),
       import('https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js'),
     ])
-    const app = initializeApp(cfg || { apiKey: 'demo', projectId: 'demo' })
+    const app = initializeApp(cfg)
     const auth = getAuth(app)
     auth.useDeviceLanguage()
     return { auth }
